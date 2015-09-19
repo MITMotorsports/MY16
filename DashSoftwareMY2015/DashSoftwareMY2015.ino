@@ -15,6 +15,7 @@
 
 //CAN communication variables
 long unsigned int rxId;
+int notSent = 1;
 unsigned char len = 0;
 unsigned char rxBuf[8];
 unsigned char buttonSend[1];
@@ -31,10 +32,16 @@ unsigned char zeros[8] = {0b0, 0b0, 0b0, 0b0, 0b0, 0b0, 0b0, 0b0};
 volatile int RTD_BUTTON_CHANGE = 0;
 
 //State variables
-int Dash_State = 0; //0 = NOT_RTD
-//1 = RTD_ACK
-//2 = RTD
-//3 = Soft_Stop
+const int NOT_RTD_SETUP = 0;
+const int NOT_RTD = 1;
+const int RTD_ACK = 2;
+const int RTD_SETUP = 3;
+const int RTD = 4;
+const int SOFT_STOP = 5; 
+
+int Dash_State = NOT_RTD; 
+
+int startTime; //reference time  
 
 MCP_CAN CAN0(MCP_CS);                               // Set CS to pin 10
 
@@ -44,10 +51,10 @@ void setup()
   // init can bus, baudrate: 500k
   if (CAN0.begin(CAN_500KBPS) == CAN_OK) 
   {
-  //Serial.print("can init ok!!\r\n");
+    Serial.print("can init ok!!\r\n");
   } else 
   {
-    //Serial.print("Can init fail!!\r\n");
+    Serial.print("Can init fail!!\r\n");
   }
 
   pinMode(0, OUTPUT);
@@ -63,167 +70,202 @@ void setup()
   PCintPort::attachInterrupt(RTD_BUTTON, buttonPress, RISING);
 
   flex();
+  startTime = millis();
 }
 
 void loop()
 {
   switch (Dash_State)
   {
-    case 0:
-      notRtd();
+    case NOT_RTD_SETUP:
+      //Serial.println("notRtdSetup()");
+      Dash_State = notRtdSetup();
       break;
-    case 1:
-      waitForRtdAck();
+    case NOT_RTD:
+      //Serial.println("notRtd()");
+      Dash_State = notRtd();
+      break;        
+    case RTD_ACK:
+      //Serial.println("waitForRtdAck()");
+      Dash_State = waitForRtdAck();
       break;
-    case 2:
-      rtd();
+    case RTD_SETUP:
+      //Serial.println("rtdSetup()");
+      Dash_State = rtdSetup();
       break;
-    case 3:
-      softStop();
+    case RTD:
+      //Serial.println("rtd()");
+      Dash_State = rtd();
+      break;
+    case SOFT_STOP:
+      //Serial.println("softStop()");
+      Dash_State = softStop();
       break;
   }
 }
 
-//Waits for a RTD button push to start the car
-void notRtd()
+//Initializes the NOT RTD state
+int notRtdSetup()
 {
-  //Serial.println("not RTD");
+  Serial.println("NOT_RTD_SETUP");
   rtdStateSend[0] = 0b0;
   CAN0.sendMsgBuf(RTD_STATE_ID, 0, 1, rtdStateSend); //Send ACK messages
   rtdLed(0); //turn off RTD LED
   ledBarUpdate(zeros); //turn off indicator LEDS
   RTD_BUTTON_CHANGE = 0;
+  
+  return RTD_ACK;
+}
 
-  //check for a button push to change to state 1
-  while (Dash_State == 0)
+//Waits for a RTD button push to start the car
+int notRtd()
+{
+  Serial.println("NOT_RTD");
+  int next_state;
+  //check for a button push to change to state 2
+  if (RTD_BUTTON_CHANGE > 0)
   {
-    if (RTD_BUTTON_CHANGE > 0)
-    {
-      Dash_State = 1;
-      RTD_BUTTON_CHANGE = 0;
-    }
+    Serial.println("press");
+    RTD_BUTTON_CHANGE = 0;
+    next_state = RTD_ACK;
+  } else
+  {
+    next_state = NOT_RTD;
   }
+  
+  return next_state;
 }
 
 
 //Waits for the VCU to acknowledge the RTD request
-void waitForRtdAck()
+int waitForRtdAck()
 {
-  //Serial.println("RTD ACK");
+  int next_state;
+  Serial.println("RTD_ACK");
   buttonSend[0] = 0b1;
-  CAN0.sendMsgBuf(BUTTON_SEND_ID, 0, 1, buttonSend); //Send ACK messages
-  int startTime = millis(); //Set start reference time
-
-  //main state loop
-  while (Dash_State == 1)
-  {
-    //check for VCU response
-    if (!digitalRead(MCP_INT))
-    {
-      CAN0.readMsgBuf(&len, rxBuf);              // Read data: len = data length, buf = data byte(s)
-      rxId = CAN0.getCanId();                    // Get message ID
-      //Serial.println("message");
-      //Serial.println(rxId);
-      if (rxId == RTD_STATE_ID)
-      {
-        //Serial.println(rxBuf[0]);
-        if (rxBuf[0] == 1)
-        {
-          Dash_State = 2;
-        }
-      }
-    }
-    
-    //Serial.println(millis() - startTime);
-    //resend message if the VCU is not responding
-    if (millis() - startTime > 500 && Dash_State == 1 && CAN_NOMSG == CAN0.checkReceive())
-    {
-      //Serial.println("resend");
-      CAN0.sendMsgBuf(BUTTON_SEND_ID, 0, 1, buttonSend);
-      startTime = millis();
-    }
+  
+  //Serial.println(millis() - startTime);
+  //resend message if the VCU is not responding
+  if (notSent){
+    CAN0.sendMsgBuf(BUTTON_SEND_ID, 0, 1, buttonSend);
+    Serial.println("resend");
+    notSent = 0;
   }
+  //waitFor(500);
+  //check for VCU response
+  if (!digitalRead(MCP_INT))
+  {
+    CAN0.readMsgBuf(&len, rxBuf);              // Read data: len = data length, buf = data byte(s)
+    rxId = CAN0.getCanId();                    // Get message ID
+    Serial.println("message");
+    Serial.println(rxId);
+    if (rxId == RTD_STATE_ID)
+    {
+      //Serial.println(rxBuf[0]);
+      if (rxBuf[0] == 1)
+      {
+        next_state = RTD_SETUP;
+        return next_state;
+      }
+    }  
+  }
+  
+  next_state = RTD_ACK;
+  
+  return next_state;
 }
 
-
-//Controls the normal function of the car
-void rtd()
+//Sets up the RTD state
+int rtdSetup()
 {
-  //Serial.println("RTD");
+  Serial.println("RTD_SETUP");
   rtdStateSend[0] = 0b1;
   CAN0.sendMsgBuf(RTD_STATE_ID, 0, 1, rtdStateSend); //Send ACK message
   soundTheAlarm(); //You know ;)
   rtdLed(1); //Turn on the RTD led
   RTD_BUTTON_CHANGE = 0;
+  
+  return RTD;
+}
 
-  while (Dash_State == 2)
+//Controls the normal function of the car
+int rtd()
+{
+  int next_state;
+  notSent = 1;
+  //read incoming CAN messages
+  if (CAN_MSGAVAIL == CAN0.checkReceive())
   {
-    //read incoming CAN messages
-    if (CAN_MSGAVAIL == CAN0.checkReceive())
+    CAN0.readMsgBuf(&len, rxBuf);              // Read data: len = data length, buf = data byte(s)
+    rxId = CAN0.getCanId();                    // Get message ID
+
+    //check for a software disable
+    if (rxId == RTD_STATE_ID && rxBuf[0] == 0)
     {
-      CAN0.readMsgBuf(&len, rxBuf);              // Read data: len = data length, buf = data byte(s)
-      rxId = CAN0.getCanId();                    // Get message ID
-
-      //check for a software disable
-      if (rxId == RTD_STATE_ID && rxBuf[0] == 0)
-      {
-        Dash_State = 0;
-      }
-
-      //check for a LED message
-      if (rxId == LED_ID)
-      {
-        ledBarUpdate(rxBuf);
-      }
+      next_state = SOFT_STOP;
+      return next_state;
     }
 
-    //check for an RTD button hold and change state if it happens
-    if (RTD_BUTTON_CHANGE > 0)
+    //check for a LED message
+    if (rxId == LED_ID)
     {
-      delay(1000);
-      if (digitalRead(RTD_BUTTON) == 1)
-      {
-        Dash_State = 3;
-        RTD_BUTTON_CHANGE = 0;
-      }
+      ledBarUpdate(rxBuf);
     }
   }
+
+  //check for an RTD button hold and change state if it happens
+  if (RTD_BUTTON_CHANGE > 0)
+  {
+    delay(1000);
+    if (digitalRead(RTD_BUTTON) == 1)
+    {
+      RTD_BUTTON_CHANGE = 0;
+      next_state = SOFT_STOP;
+      return next_state;
+    }
+  }
+  
+  next_state = RTD;
+  
+  return next_state;
 }
 
 
 //Waits for the VCU to acknowledge the soft stop request
-void softStop()
+int softStop()
 {
-  //Serial.println("Soft stop");
+  int next_state;
+  Serial.println("SOFT_STOP");
   buttonSend[0] = 0b10;
-  CAN0.sendMsgBuf(BUTTON_SEND_ID, 0, 1, buttonSend); //Send ACK messages
-  int startTime = millis(); //Set start reference time
-
-  //main start loop
-  while (Dash_State == 3)
+  
+  //resend message if the VCU is not responding
+  //Serial.println("Time before wait: %d", millis());
+  waitFor(500);
+  //Serial.println("Time after wait: %d", millis());
+  if (CAN_NOMSG == CAN0.checkReceive())
   {
-    //check for VCU response
-    if (!digitalRead(MCP_INT))
+    CAN0.sendMsgBuf(BUTTON_SEND_ID, 0, 1, buttonSend);
+  }
+    
+  //check for VCU response
+  if (!digitalRead(MCP_INT))
+  {
+    CAN0.readMsgBuf(&len, rxBuf);              // Read data: len = data length, buf = data byte(s)
+    rxId = CAN0.getCanId();                    // Get message ID
+    
+    if (rxId == RTD_STATE_ID)
     {
-      CAN0.readMsgBuf(&len, rxBuf);              // Read data: len = data length, buf = data byte(s)
-      rxId = CAN0.getCanId();                    // Get message ID
-      
-      if (rxId == RTD_STATE_ID)
+      if (rxBuf[0] == 0)
       {
-        if (rxBuf[0] == 0)
-        {
-          Dash_State = 0;
-        }
+        next_state = NOT_RTD_SETUP;
+        return next_state;
       }
     }
-
-    //resend message if the VCU is not responding
-    if (millis() - startTime > 500 && Dash_State == 3 && CAN_NOMSG == CAN0.checkReceive())
-    {
-      CAN0.sendMsgBuf(BUTTON_SEND_ID, 0, 1, buttonSend);
-      startTime = millis();
-    }
   }
+
+  next_state = SOFT_STOP;
+  
+  return next_state;
 }
 
 
@@ -300,4 +342,12 @@ void flex()
     delay(10);
   }
   ledBarUpdate(zeros);
+}
+
+void waitFor(int t){
+  int startTime = millis();
+  int currentTime = millis();
+  while (currentTime - startTime < t){
+    currentTime = millis();
+  }
 }
