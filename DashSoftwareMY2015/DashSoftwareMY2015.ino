@@ -107,6 +107,7 @@ void loop()
 //Initializes the NOT RTD state
 int notRtdSetup()
 {
+  notSent =1;
   Serial.println("NOT_RTD_SETUP");
   rtdStateSend[0] = 0b0;
   CAN0.sendMsgBuf(RTD_STATE_ID, 0, 1, rtdStateSend); //Send ACK messages
@@ -120,7 +121,6 @@ int notRtdSetup()
 //Waits for a RTD button push to start the car
 int notRtd()
 {
-  Serial.println("NOT_RTD");
   int next_state;
   //check for a button push to change to state 2
   if (RTD_BUTTON_CHANGE > 0)
@@ -141,7 +141,6 @@ int notRtd()
 int waitForRtdAck()
 {
   int next_state;
-  Serial.println("RTD_ACK");
   buttonSend[0] = 0b1;
   
   //Serial.println(millis() - startTime);
@@ -235,16 +234,15 @@ int rtd()
 int softStop()
 {
   int next_state;
-  Serial.println("SOFT_STOP");
   buttonSend[0] = 0b10;
   
   //resend message if the VCU is not responding
   //Serial.println("Time before wait: %d", millis());
-  waitFor(500);
+  //waitFor(500);
   //Serial.println("Time after wait: %d", millis());
-  if (CAN_NOMSG == CAN0.checkReceive())
-  {
-    CAN0.sendMsgBuf(BUTTON_SEND_ID, 0, 1, buttonSend);
+  if (notSent){
+     notSent = 0;
+     CAN0.sendMsgBuf(BUTTON_SEND_ID, 0, 1, buttonSend);
   }
     
   //check for VCU response
