@@ -36,7 +36,6 @@ int Dash_State = 0; //0 = NOT_RTD
 //2 = RTD
 //3 = Soft_Stop
 
-
 MCP_CAN CAN0(MCP_CS);                               // Set CS to pin 10
 
 void setup()
