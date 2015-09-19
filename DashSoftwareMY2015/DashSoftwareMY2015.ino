@@ -2,6 +2,7 @@
 #include <mcp_can.h>
 #include <SPI.h>
 #include <avr/interrupt.h>
+#include <math.h>
 
 //Pin Definitions
 #define LED_SERIAL 2
@@ -102,6 +103,7 @@ void loop()
       Dash_State = softStop();
       break;
   }
+  
 }
 
 //Initializes the NOT RTD state
@@ -115,7 +117,7 @@ int notRtdSetup()
   ledBarUpdate(zeros); //turn off indicator LEDS
   RTD_BUTTON_CHANGE = 0;
   
-  return RTD_ACK;
+  return NOT_RTD;
 }
 
 //Waits for a RTD button push to start the car
@@ -201,7 +203,7 @@ int rtd()
     //check for a software disable
     if (rxId == RTD_STATE_ID && rxBuf[0] == 0)
     {
-      next_state = SOFT_STOP;
+      next_state = NOT_RTD_SETUP;
       return next_state;
     }
 
@@ -243,6 +245,7 @@ int softStop()
   if (notSent){
      notSent = 0;
      CAN0.sendMsgBuf(BUTTON_SEND_ID, 0, 1, buttonSend);
+     Serial.println("in soft stop");
   }
     
   //check for VCU response
@@ -311,33 +314,55 @@ void ledBarUpdate(unsigned char states[8])
 //makes the haters cry by sweeping through the LEDS like MJ sweeps across the dance floor
 void flex()
 {
-  //Serial.println("flexing");
-  unsigned char flexor[8] = {0b0, 0b0, 0b0, 0b0, 0b0, 0b0, 0b0, 0b0};
-  for (int i = 1; i < 63; i++)
-  {
-    //Serial.println(i);
-    for (int j = i - 1; j <= i + 1; j++)
-    {
-      //Serial.println(j);
-      int flexorInd = int(i / 8);
-      byte flexorVal = j - flexorInd * 8;
-      flexor[flexorInd] = flexorVal;
+  Serial.println("flexing");
+  flexForwards();
+  flexBackwards();
+  flexForwards();
+}
+
+int getBinary(int i){
+  switch (i){
+        case 0:
+          return 0b10000000;
+        case 1:
+          return 0b01000000;
+        case 2:
+          return 0b00100000;
+        case 3:
+          return 0b00010000;
+        case 4:
+          return 0b00001000;
+        case 5:
+          return 0b00000100;
+        case 6:
+          return 0b00000010;
+        case 7:
+          return 0b00000001;
+      }
+}
+
+void flexBackwards(){
+  unsigned char input[8] = {0b0, 0b0, 0b0, 0b0, 0b0, 0b0, 0b0, 0b0};
+  for (int i =7; i>-1; i--){
+    for (int j=7; j>-1; j--){
+      input[i] = getBinary(j);
+      ledBarUpdate(input);
+      delay(10);
+      input[i] = 0b0;
     }
-    ledBarUpdate(flexor);
-    memset(flexor, 0b0, sizeof(flexor));
-    delay(10);
   }
-  for (int i = 62; i > 0; i--)
-  {
-    for (int j = i - 1; j <= i + 1; j++)
-    {
-      int flexorInd = int(i / 8);
-      byte flexorVal = j - flexorInd * 8;
-      flexor[flexorInd] = flexorVal;
+  ledBarUpdate(zeros);
+}
+
+void flexForwards(){
+  unsigned char input[8] = {0b0, 0b0, 0b0, 0b0, 0b0, 0b0, 0b0, 0b0};
+  for (int i =0; i<8; i++){
+    for (int j=0; j<8; j++){
+      input[i] = getBinary(j);
+      ledBarUpdate(input);
+      delay(10);
+      input[i] = 0b0;
     }
-    ledBarUpdate(flexor);
-    memset(flexor, 0b0, sizeof(flexor));
-    delay(10);
   }
   ledBarUpdate(zeros);
 }
