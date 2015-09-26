@@ -3,7 +3,12 @@
 #include <SPI.h>
 #include <avr/interrupt.h>
 #include <math.h>
+
+//Magic timing library stuff
+#include <PciManager.h>
 #include <SoftTimer.h>
+#include <Debouncer.h>
+#include <DelayRun.h>
 
 //Pin Definitions
 #define LED_SERIAL 2
@@ -46,15 +51,24 @@ int startTime; //reference time
 MCP_CAN CAN0(MCP_CS);
 
 //Task readTask(50, readCAN);
+
 /***************** Prototypes *************/
 void ledBarUpdate(unsigned char states[8]);
-// void rtdLed(int newState);
+void rtdLed(int newState);
+
+void RTDPressed();
+void RTDReleased(unsigned long pressTimespanMs);
+boolean buzzerOff(Task*);
 
 void readCAN(Task *me);
 void flex();
 void flexForwards();
 void flexBackwards();
 /***************** End Prototypes *********/
+
+Debouncer debouncer(RTD_BUTTON, MODE_CLOSE_ON_PUSH, RTDPressed, RTDReleased);
+
+DelayRun buzzerOffTask(1333, buzzerOff);
 
 void setup() {
   Serial.begin(115200);
@@ -77,20 +91,40 @@ void setup() {
   pinMode(DRS, OUTPUT);
   pinMode(MCP_INT, INPUT);
 
+  PciManager.registerListener(RTD_BUTTON, &debouncer);
+
   flex();
   startTime = millis();
 
-  // Not RTD setup
-  // rtdLed(0); //turn off RTD LED
+  //Defaults to not ready to drive
+  rtdLed(0); //turn off RTD LED
   ledBarUpdate(zeros); //turn off indicator LEDS
 }
 
-void flex()
-{
-  Serial.println("flexing");
-  flexForwards();
-  flexBackwards();
-  flexForwards();
+void RTDPressed() {
+  //Do nothing, we only act on release
+  Serial.println("RTD pressed");
+}
+
+void RTDReleased(unsigned long pressTimespanMs) {
+  if(pressTimespanMs >= 1000) {
+    //Soft stop, send a kill msg to VCU
+     Serial.println("Sent stop message");
+     digitalWrite(DRS, HIGH);
+
+     //Turn off after delay
+     buzzerOffTask.startDelayed();
+  }
+  else {
+    //Regular push, send a start msg to VCU (or two)
+     Serial.println("Sent start message");
+  }
+}
+
+boolean buzzerOff(Task*) {
+  digitalWrite(DRS, LOW);
+
+  return true;
 }
 
 void readCAN() {
@@ -110,12 +144,13 @@ void readCAN() {
           //Software Disable
           return;
       }
-
   }
 }
 
-int getBinary(int i){
-  return 1 << (7 - (i%8));
+//changes the state of the RTD LED
+void rtdLed(int newState)
+{
+  digitalWrite(RTD_LED, newState);
 }
 
 void ledBarUpdate(unsigned char states[8])
@@ -125,6 +160,18 @@ void ledBarUpdate(unsigned char states[8])
     shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[i]);
   }
   digitalWrite(LED_LATCH, HIGH);
+}
+
+void flex()
+{
+  Serial.println("flexing");
+  flexForwards();
+  flexBackwards();
+  flexForwards();
+}
+
+int getBinary(int i){
+  return 1 << (7 - (i%8));
 }
 
 void flexBackwards(){
