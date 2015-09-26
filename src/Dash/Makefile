@@ -5,7 +5,6 @@
 
 ### PROJECT_DIR
 ### This is the path to where you have created/cloned your project
-PROJECT_DIR       = /Users/aheifetz/Dropbox/FSAE/dash_v2/Bare-Arduino-Project
 PROJECT_DIR       = $(HOME)/FSAE/Arduino
 
 ### AVR_GCC_VERSION
