@@ -1,4 +1,3 @@
-#include <PinChangeInt.h>
 #include <mcp_can.h>
 #include <SPI.h>
 #include <avr/interrupt.h>
@@ -21,8 +20,6 @@
 #define MCP_CS 10
 
 //CAN communication variables
-long unsigned int rxId;
-int notSent = 1;
 unsigned char buttonSend[1];
 unsigned char rtdStateSend[1];
 #define BUTTON_SEND_ID 2
@@ -31,21 +28,6 @@ unsigned char rtdStateSend[1];
 
 //LED variables
 unsigned char zeros[8] = {0};
-
-//RTD button variables
-volatile int RTD_BUTTON_CHANGE = 0;
-
-//State variables
-const int NOT_RTD_SETUP = 0;
-const int NOT_RTD = 1;
-const int RTD_ACK = 2;
-const int RTD_SETUP = 3;
-const int RTD = 4;
-const int SOFT_STOP = 5; 
-
-int Dash_State = NOT_RTD; 
-
-int startTime; //reference time
 
 // Set CS to pin 10
 MCP_CAN CAN0(MCP_CS);
@@ -58,17 +40,22 @@ void rtdLed(int newState);
 
 void RTDPressed();
 void RTDReleased(unsigned long pressTimespanMs);
-boolean buzzerOff(Task*);
 
-void readCAN(Task *me);
+// Functions executed by tasks
+boolean buzzerOff(Task*);
+void readCAN(Task*);
+
 void flex();
 void flexForwards();
 void flexBackwards();
-/***************** End Prototypes *********/
 
+Task runCanTask(5, readCAN);
+DelayRun buzzerOffTask(1333, buzzerOff);
 Debouncer debouncer(RTD_BUTTON, MODE_CLOSE_ON_PUSH, RTDPressed, RTDReleased);
 
-DelayRun buzzerOffTask(1333, buzzerOff);
+/***************** End Prototypes *********/
+
+
 
 void setup() {
   Serial.begin(115200);
@@ -91,10 +78,10 @@ void setup() {
   pinMode(DRS, OUTPUT);
   pinMode(MCP_INT, INPUT);
 
+  SoftTimer.add(&runCanTask);
   PciManager.registerListener(RTD_BUTTON, &debouncer);
 
   flex();
-  startTime = millis();
 
   //Defaults to not ready to drive
   rtdLed(0); //turn off RTD LED
@@ -110,30 +97,35 @@ void RTDReleased(unsigned long pressTimespanMs) {
   if(pressTimespanMs >= 1000) {
     //Soft stop, send a kill msg to VCU
      Serial.println("Sent stop message");
-     digitalWrite(DRS, HIGH);
-
-     //Turn off after delay
-     buzzerOffTask.startDelayed();
+     CAN0.sendMsgBuf(BUTTON_SEND_ID, 0, 1, buttonSend);
+     rtdLed(0);
   }
   else {
-    //Regular push, send a start msg to VCU (or two)
-     Serial.println("Sent start message");
+    //Regular push, send start msg to VCU and buzz
+    Serial.println("Sent start message");
+    CAN0.sendMsgBuf(BUTTON_SEND_ID, 0, 1, buttonSend);
+    rtdLed(1);
+    digitalWrite(DRS, HIGH);
+    //Turn off after 1333 ms delay
+    buzzerOffTask.startDelayed();
   }
 }
 
+// called by buzzerOffTask
 boolean buzzerOff(Task*) {
   digitalWrite(DRS, LOW);
-
-  return true;
+  // False means don't execute follow-up task
+  return false;
 }
 
-void readCAN() {
+// called by readCanTask
+void readCAN(Task*) {
   if(CAN0.checkReceive() != CAN_MSGAVAIL) {
     //No message available: end the loop quick.
     return;
   }
   byte len;
-  byte * ptr = &len;
+  byte *ptr = &len;
   unsigned char rxBuf[8];
   CAN0.readMsgBuf(ptr, rxBuf);
   int id = CAN0.getCanId();
@@ -141,9 +133,13 @@ void readCAN() {
     case VCU_ID:
       switch(rxBuf[0]) {
         case 0:
-          //Software Disable
+          rtdLed(0);
           return;
       }
+      break;
+    case LED_ID:
+      ledBarUpdate(rxBuf);
+      break;
   }
 }
 
