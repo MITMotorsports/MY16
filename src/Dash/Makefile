@@ -33,8 +33,8 @@ USER_LIB_PATH     :=  $(realpath $(PROJECT_DIR)/lib)
 ### For Arduino IDE 1.6.x
 ### Both BOARD_TAG and BOARD_SUB are needed. They must be set to the board you are currently using. (i.e BOARD_TAG = uno, mega, etc. & BOARD_SUB = atmega2560, etc.)
 ### Note: for the Arduino Uno, only BOARD_TAG is mandatory and BOARD_SUB can be equal to anything
-BOARD_TAG         = uno
-BOARD_SUB         = atmega328p
+BOARD_TAG         = pro
+BOARD_SUB         = 16MHzatmega328
 
 ### MONITOR_BAUDRATE
 ### It must be set to Serial baudrate value you are using.
@@ -46,7 +46,7 @@ AVR_TOOLS_DIR     = /usr/local
 
 ### AVRDDUDE
 ### Path to avrdude directory.
-AVRDDUDE          = /usr/local/bin/avrdude
+AVRDUDE          = /usr/local/CrossPack-AVR/bin/avrdude
 
 ### CFLAGS_STD
 CFLAGS_STD        = -std=gnu11
@@ -65,7 +65,7 @@ endif
 
 ### MONITOR_PORT
 ### The port your board is connected to. Using an '*' tries all the ports and finds the right one.
-MONITOR_PORT      = /dev/tty.usbmodem*
+MONITOR_PORT      = /dev/tty.usbserial*
 
 ### OBJDIR
 ### This is were you put the binaries you just compile using 'make'

@@ -22,8 +22,9 @@
 //CAN communication variables
 unsigned char buttonSend[1];
 unsigned char rtdStateSend[1];
-#define BUTTON_SEND_ID 2
-#define VCU_ID 3
+#define RTD_BUTTON_ID 2
+#define STOP_BUTTON_ID 3
+#define VCU_ID 999
 #define LED_ID 256
 
 //LED variables
@@ -35,27 +36,28 @@ MCP_CAN CAN0(MCP_CS);
 //Task readTask(50, readCAN);
 
 /***************** Prototypes *************/
-void ledBarUpdate(unsigned char states[8]);
-void rtdLed(int newState);
-
+// Task functions for event tasks
 void RTDPressed();
 void RTDReleased(unsigned long pressTimespanMs);
 
-// Functions executed by tasks
+// Task functions for timed tasks
 boolean buzzerOff(Task*);
 void readCAN(Task*);
 
+// Wrappers for tasks, triggered by task manager and execute task functions
+Task runCanTask(1, readCAN);
+DelayRun buzzerOffTask(1333, buzzerOff);
+Debouncer debouncer(RTD_BUTTON, MODE_OPEN_ON_PUSH, RTDPressed, RTDReleased);
+
+// LED operations
+void rtdLed(int newState);
+
+// Light-bar operations
+void lightBarUpdate(unsigned char states[8]);
 void flex();
 void flexForwards();
 void flexBackwards();
-
-Task runCanTask(5, readCAN);
-DelayRun buzzerOffTask(1333, buzzerOff);
-Debouncer debouncer(RTD_BUTTON, MODE_CLOSE_ON_PUSH, RTDPressed, RTDReleased);
-
 /***************** End Prototypes *********/
-
-
 
 void setup() {
   Serial.begin(115200);
@@ -78,14 +80,16 @@ void setup() {
   pinMode(DRS, OUTPUT);
   pinMode(MCP_INT, INPUT);
 
-  SoftTimer.add(&runCanTask);
-  PciManager.registerListener(RTD_BUTTON, &debouncer);
-
   flex();
 
   //Defaults to not ready to drive
   rtdLed(0); //turn off RTD LED
-  ledBarUpdate(zeros); //turn off indicator LEDS
+  lightBarUpdate(zeros); //turn off indicator LEDS
+
+  // Start interrupt and CAN read loop
+  SoftTimer.add(&runCanTask);
+  PciManager.registerListener(RTD_BUTTON, &debouncer);
+
 }
 
 void RTDPressed() {
@@ -97,13 +101,13 @@ void RTDReleased(unsigned long pressTimespanMs) {
   if(pressTimespanMs >= 1000) {
     //Soft stop, send a kill msg to VCU
      Serial.println("Sent stop message");
-     CAN0.sendMsgBuf(BUTTON_SEND_ID, 0, 1, buttonSend);
+     CAN0.sendMsgBuf(STOP_BUTTON_ID, 0, 1, buttonSend);
      rtdLed(0);
   }
   else {
     //Regular push, send start msg to VCU and buzz
     Serial.println("Sent start message");
-    CAN0.sendMsgBuf(BUTTON_SEND_ID, 0, 1, buttonSend);
+    CAN0.sendMsgBuf(RTD_BUTTON_ID, 0, 1, buttonSend);
     rtdLed(1);
     digitalWrite(DRS, HIGH);
     //Turn off after 1333 ms delay
@@ -120,26 +124,33 @@ boolean buzzerOff(Task*) {
 
 // called by readCanTask
 void readCAN(Task*) {
-  if(CAN0.checkReceive() != CAN_MSGAVAIL) {
-    //No message available: end the loop quick.
-    return;
-  }
-  byte len;
-  byte *ptr = &len;
-  unsigned char rxBuf[8];
-  CAN0.readMsgBuf(ptr, rxBuf);
-  int id = CAN0.getCanId();
-  switch(id) {
-    case VCU_ID:
-      switch(rxBuf[0]) {
-        case 0:
-          rtdLed(0);
-          return;
-      }
-      break;
-    case LED_ID:
-      ledBarUpdate(rxBuf);
-      break;
+  // Check if pin is tripped
+  if (!digitalRead(MCP_INT)) {
+    // One of these two ifs is redundant...not sure which one
+    if(CAN0.checkReceive() != CAN_MSGAVAIL) {
+      //No message available: end the loop quick.
+      return;
+    }
+    unsigned char len = 0;
+    unsigned char *ptr = &len;
+    unsigned char rxBuf[8];
+    CAN0.readMsgBuf(ptr, rxBuf);
+    int id = CAN0.getCanId();
+    Serial.print("Message ID: ");
+    Serial.print(id);
+    Serial.print("\r\n");
+    switch(id) {
+      case VCU_ID:
+        switch(rxBuf[0]) {
+          case 0:
+            rtdLed(0);
+            return;
+        }
+        break;
+      case LED_ID:
+        lightBarUpdate(rxBuf);
+        break;
+    }
   }
 }
 
@@ -149,12 +160,19 @@ void rtdLed(int newState)
   digitalWrite(RTD_LED, newState);
 }
 
-void ledBarUpdate(unsigned char states[8])
+void lightBarUpdate(unsigned char states[8])
 {
   digitalWrite(LED_LATCH, LOW);
-  for(int i = 0; i < 8; i++) {
-    shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[i]);
-  }
+
+  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, (int)states[1]);
+  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, (int)states[0]);
+  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, (int)states[3]);
+  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, (int)states[2]);
+  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, (int)states[5]);
+  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, (int)states[4]);
+  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, (int)states[7]);
+  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, (int)states[6]);
+
   digitalWrite(LED_LATCH, HIGH);
 }
 
@@ -175,12 +193,12 @@ void flexBackwards(){
   for (int i =7; i>-1; i--){
     for (int j=7; j>-1; j--){
       input[i] = getBinary(j);
-      ledBarUpdate(input);
+      lightBarUpdate(input);
       delay(10);
       input[i] = 0;
     }
   }
-  ledBarUpdate(zeros);
+  lightBarUpdate(zeros);
 }
 
 void flexForwards(){
@@ -188,10 +206,10 @@ void flexForwards(){
   for (int i =0; i<8; i++){
     for (int j=0; j<8; j++){
       input[i] = getBinary(j);
-      ledBarUpdate(input);
+      lightBarUpdate(input);
       delay(10);
       input[i] = 0;
     }
   }
-  ledBarUpdate(zeros);
+  lightBarUpdate(zeros);
 }
