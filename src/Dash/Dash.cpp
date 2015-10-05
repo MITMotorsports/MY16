@@ -22,9 +22,11 @@
 //CAN communication variables
 unsigned char buttonSend[1];
 unsigned char rtdStateSend[1];
+#define FRONT_NODE 1
 #define RTD_BUTTON_ID 2
 #define STOP_BUTTON_ID 3
-#define VCU_ID 999
+#define MC1 768
+#define MC2 769
 #define LED_ID 256
 
 //LED variables
@@ -140,15 +142,7 @@ void readCAN(Task*) {
     Serial.print(id);
     Serial.print("\r\n");
     switch(id) {
-      case VCU_ID:
-        switch(rxBuf[0]) {
-          case 0:
-            rtdLed(0);
-            return;
-        }
-        break;
-      case LED_ID:
-        lightBarUpdate(rxBuf);
+      case FRONT_NODE:
         break;
     }
   }
