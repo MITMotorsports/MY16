@@ -9,33 +9,12 @@
 #include <Debouncer.h>
 #include <DelayRun.h>
 
-//Pin Definitions
-#define LED_SERIAL 2
-#define LED_CLK 3
-#define LED_LATCH 4
-#define RTD_LED 5
-#define RTD_BUTTON 6
-#define DRS 7
-#define MCP_INT 9
-#define MCP_CS 10
-
-//CAN communication variables
-unsigned char buttonSend[1];
-unsigned char rtdStateSend[1];
-#define FRONT_NODE 1
-#define RTD_BUTTON_ID 2
-#define STOP_BUTTON_ID 3
-#define MC1 768
-#define MC2 769
-#define LED_ID 256
+#include "Dash.h"
+#include "Can_Manager.h"
+#include "Led_Manager.h"
 
 //LED variables
 unsigned char zeros[8] = {0};
-
-// Set CS to pin 10
-MCP_CAN CAN0(MCP_CS);
-
-//Task readTask(50, readCAN);
 
 /***************** Prototypes *************/
 // Task functions for event tasks
@@ -51,6 +30,9 @@ Task runCanTask(1, readCAN);
 DelayRun buzzerOffTask(1333, buzzerOff);
 Debouncer debouncer(RTD_BUTTON, MODE_OPEN_ON_PUSH, RTDPressed, RTDReleased);
 
+Led_Manager LED;
+Can_Manager CAN;
+
 // LED operations
 void rtdLed(int newState);
 
@@ -63,29 +45,14 @@ void flexBackwards();
 
 void setup() {
   Serial.begin(115200);
-  // init can bus, baudrate: 500k
-  if (CAN0.begin(CAN_500KBPS) == CAN_OK) 
-  {
-    Serial.print("can init ok!!\r\n");
-  } else 
-  {
-    Serial.print("Can init fail!!\r\n");
-  }
+  LED.set_pins();
 
-  pinMode(0, OUTPUT);
-  pinMode(1, OUTPUT);
-  pinMode(LED_SERIAL, OUTPUT);
-  pinMode(LED_CLK, OUTPUT);
-  pinMode(LED_LATCH, OUTPUT);
-  pinMode(RTD_LED, OUTPUT);
-  pinMode(RTD_BUTTON, INPUT);
-  pinMode(DRS, OUTPUT);
-  pinMode(MCP_INT, INPUT);
-
-  flex();
+  CAN.init();
+  
+  LED.startup_sequence();
+  LED.rtd_off();
 
   //Defaults to not ready to drive
-  rtdLed(0); //turn off RTD LED
   lightBarUpdate(zeros); //turn off indicator LEDS
 
   // Start interrupt and CAN read loop
@@ -142,30 +109,24 @@ void readCAN(Task*) {
     Serial.print(id);
     Serial.print("\r\n");
     switch(id) {
-      case FRONT_NODE:
+      case FRONT_NODE_ID:
         break;
     }
   }
-}
-
-//changes the state of the RTD LED
-void rtdLed(int newState)
-{
-  digitalWrite(RTD_LED, newState);
 }
 
 void lightBarUpdate(unsigned char states[8])
 {
   digitalWrite(LED_LATCH, LOW);
 
-  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, (int)states[1]);
-  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, (int)states[0]);
-  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, (int)states[3]);
-  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, (int)states[2]);
-  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, (int)states[5]);
-  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, (int)states[4]);
-  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, (int)states[7]);
-  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, (int)states[6]);
+  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[1]);
+  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[0]);
+  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[3]);
+  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[2]);
+  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[5]);
+  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[4]);
+  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[7]);
+  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[6]);
 
   digitalWrite(LED_LATCH, HIGH);
 }
@@ -178,7 +139,7 @@ void flex()
   flexForwards();
 }
 
-int getBinary(int i){
+unsigned int getBinary(unsigned int i){
   return 1 << (7 - (i%8));
 }
 
