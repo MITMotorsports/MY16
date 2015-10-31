@@ -13,74 +13,62 @@
 #include "Can_Manager.h"
 #include "Led_Manager.h"
 
-//LED variables
-unsigned char zeros[8] = {0};
-
 /***************** Prototypes *************/
-// Task functions for event tasks
-void RTDPressed();
-void RTDReleased(unsigned long pressTimespanMs);
-
-// Task functions for timed tasks
-boolean buzzerOff(Task*);
-void readCAN(Task*);
-
-// Wrappers for tasks, triggered by task manager and execute task functions
-Task runCanTask(1, readCAN);
-DelayRun buzzerOffTask(1333, buzzerOff);
-Debouncer debouncer(RTD_BUTTON, MODE_OPEN_ON_PUSH, RTDPressed, RTDReleased);
-
+// Declare managers with default constructors
 Led_Manager LED;
 Can_Manager CAN;
 
-// LED operations
-void rtdLed(int newState);
+// Task functions for event tasks
+void RTDPressed();
+void RTDReleased(unsigned long pressTimespanMs);
+Debouncer debouncer(RTD_BUTTON, MODE_OPEN_ON_PUSH, RTDPressed, RTDReleased);
 
-// Light-bar operations
-void lightBarUpdate(unsigned char states[8]);
-void flex();
-void flexForwards();
-void flexBackwards();
+// Task functions for timed tasks
+
+boolean enableFired = false;
+boolean buzzerOff(Task*);
+boolean enable(Task*);
+DelayRun buzzerOffTask(1333, buzzerOff);
+DelayRun enableTask(500, enable);
+
+// CAN gets highest priority
+void readCAN(Task*);
+Task readCanTask(0, readCAN);
+void processVcuMessage(unsigned char message[8]);
+
 /***************** End Prototypes *********/
 
 void setup() {
   Serial.begin(115200);
-  LED.set_pins();
-
-  CAN.init();
-  
-  LED.startup_sequence();
-  LED.rtd_off();
-
-  //Defaults to not ready to drive
-  lightBarUpdate(zeros); //turn off indicator LEDS
+  CAN.begin();
+  LED.begin();
 
   // Start interrupt and CAN read loop
-  SoftTimer.add(&runCanTask);
+  SoftTimer.add(&readCanTask);
   PciManager.registerListener(RTD_BUTTON, &debouncer);
+}
 
+boolean enable(Task*) {
+  // no need for a lock on this variable since single threaded
+  enableFired = true;
+  Serial.println("Sent start message");
+  CAN.write(ENABLE_REQUEST);
+  // False means don't execute follow-up task
+  return false;
 }
 
 void RTDPressed() {
-  //Do nothing, we only act on release
-  Serial.println("RTD pressed");
+  // The enable task will fire automatically if held for >1000ms
+  enableFired = false;
+  enableTask.startDelayed();
 }
 
-void RTDReleased(unsigned long pressTimespanMs) {
-  if(pressTimespanMs >= 1000) {
-    //Soft stop, send a kill msg to VCU
-     Serial.println("Sent stop message");
-     CAN0.sendMsgBuf(STOP_BUTTON_ID, 0, 1, buttonSend);
-     rtdLed(0);
-  }
-  else {
-    //Regular push, send start msg to VCU and buzz
-    Serial.println("Sent start message");
-    CAN0.sendMsgBuf(RTD_BUTTON_ID, 0, 1, buttonSend);
-    rtdLed(1);
-    digitalWrite(DRS, HIGH);
-    //Turn off after 1333 ms delay
-    buzzerOffTask.startDelayed();
+void RTDReleased(unsigned long) {
+  if(!enableFired) {
+    // Wasn't held for 1000ms so handle as disable message and cancel enable handler
+    SoftTimer.remove(&enableTask);
+    Serial.println("Sent stop message");
+    CAN.write(DISABLE_REQUEST);
   }
 }
 
@@ -93,78 +81,26 @@ boolean buzzerOff(Task*) {
 
 // called by readCanTask
 void readCAN(Task*) {
-  // Check if pin is tripped
-  if (!digitalRead(MCP_INT)) {
-    // One of these two ifs is redundant...not sure which one
-    if(CAN0.checkReceive() != CAN_MSGAVAIL) {
-      //No message available: end the loop quick.
-      return;
-    }
-    unsigned char len = 0;
-    unsigned char *ptr = &len;
-    unsigned char rxBuf[8];
-    CAN0.readMsgBuf(ptr, rxBuf);
-    int id = CAN0.getCanId();
-    Serial.print("Message ID: ");
-    Serial.print(id);
-    Serial.print("\r\n");
-    switch(id) {
-      case FRONT_NODE_ID:
-        break;
-    }
+  // If no message, break early
+  if(!CAN.msgAvailable()) { return; }
+  Frame frame = CAN.read();
+  switch(frame.id) {
+    case VCU_ID:
+      processVcuMessage(frame.message);
+      break;
   }
 }
 
-void lightBarUpdate(unsigned char states[8])
-{
-  digitalWrite(LED_LATCH, LOW);
-
-  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[1]);
-  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[0]);
-  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[3]);
-  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[2]);
-  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[5]);
-  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[4]);
-  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[7]);
-  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[6]);
-
-  digitalWrite(LED_LATCH, HIGH);
-}
-
-void flex()
-{
-  Serial.println("flexing");
-  flexForwards();
-  flexBackwards();
-  flexForwards();
-}
-
-unsigned int getBinary(unsigned int i){
-  return 1 << (7 - (i%8));
-}
-
-void flexBackwards(){
-  unsigned char input[8] = {0};
-  for (int i =7; i>-1; i--){
-    for (int j=7; j>-1; j--){
-      input[i] = getBinary(j);
-      lightBarUpdate(input);
-      delay(10);
-      input[i] = 0;
-    }
+void processVcuMessage(unsigned char message[8]) {
+  if(message[0]) {
+    Serial.println("Received start message");
+    LED.rtd_on();
+    digitalWrite(DRS, HIGH);
+    //Turn off after 1333 ms delay
+    buzzerOffTask.startDelayed();
   }
-  lightBarUpdate(zeros);
-}
-
-void flexForwards(){
-  unsigned char input[8] = {0};
-  for (int i =0; i<8; i++){
-    for (int j=0; j<8; j++){
-      input[i] = getBinary(j);
-      lightBarUpdate(input);
-      delay(10);
-      input[i] = 0;
-    }
+  else {
+    Serial.println("Received stop message");
+    LED.rtd_off();
   }
-  lightBarUpdate(zeros);
 }

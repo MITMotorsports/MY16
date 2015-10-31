@@ -1,21 +1,15 @@
 #include "Can_Manager.h"
 
 // Pin for CAN
-#define MCP_CS 10
 
-// Relevant CAN IDs
-#define FRONT_NODE_ID 1
-#define RTD_BUTTON_ID 2
-#define STOP_BUTTON_ID 3
-#define MC1_ID 485
-#define MC2_ID 486
+Frame ENABLE_REQUEST = { .id=DASH_ID, .message={1}};
+Frame DISABLE_REQUEST = { .id=DASH_ID, .message={0}};
 
-//CAN communication variables
-unsigned char buttonSend[1];
-unsigned char rtdStateSend[1];
-
-void Can_Manager::init() {
+Can_Manager::Can_Manager () {
   delegate = MCP_CAN(MCP_CS);
+}
+
+void Can_Manager::begin() {
   if (delegate.begin(CAN_500KBPS) == CAN_OK) 
   {
     Serial.print("can init ok!!\r\n");
@@ -23,4 +17,20 @@ void Can_Manager::init() {
   {
     Serial.print("Can init fail!!\r\n");
   }
+}
+
+bool Can_Manager::msgAvailable() {
+  return delegate.checkReceive() == CAN_MSGAVAIL;
+}
+
+Frame Can_Manager::read() {
+  Frame frame;
+  unsigned char len = 0;
+  delegate.readMsgBuf(&len, frame.message);
+  frame.id = delegate.getCanId();
+  return frame;
+}
+
+void Can_Manager::write(Frame f) {
+  delegate.sendMsgBuf(f.id, 0, 8, f.message);
 }

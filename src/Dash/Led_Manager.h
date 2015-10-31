@@ -5,10 +5,12 @@ class Led_Manager {
   private:
     void forward_sequence();
     void backward_sequence();
+    void lightBarUpdate(unsigned char states[8]);
+    void flex();
+    void flexForwards();
+    void flexBackwards();
   public:
-    Led_Manager();
-    void set_pins();
-    void startup_sequence();
+    void begin();
     void rtd_off();
     void rtd_on();
 };
