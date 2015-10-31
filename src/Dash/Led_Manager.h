@@ -13,5 +13,6 @@ class Led_Manager {
     void begin();
     void rtd_off();
     void rtd_on();
+    void motor_power(int power);
 };
 #endif // LED_MANAGER_H

@@ -35,7 +35,7 @@ DelayRun enableTask(500, enable);
 void readCAN(Task*);
 Task readCanTask(0, readCAN);
 void processVcuMessage(unsigned char message[8]);
-
+void processMotorMessage(unsigned char message[8]);
 /***************** End Prototypes *********/
 
 void setup() {
@@ -88,6 +88,9 @@ void readCAN(Task*) {
     case VCU_ID:
       processVcuMessage(frame.message);
       break;
+    case MOTOR_ID:
+      processMotorMessage(frame.message);
+      break;
   }
 }
 
@@ -104,3 +107,8 @@ void processVcuMessage(unsigned char message[8]) {
     LED.rtd_off();
   }
 }
+
+void processMotorMessage(unsigned char message[8]){
+  int x = 0;
+}
+

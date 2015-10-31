@@ -1,6 +1,6 @@
 #include <SPI.h>
 #include <avr/interrupt.h>
-
+#include <math.h>
 #include "Led_Manager.h"
 
 #define LED_SERIAL 2
@@ -60,6 +60,27 @@ void Led_Manager::lightBarUpdate(unsigned char states[8])
 
 unsigned int getBinary(unsigned int i){
   return 1 << (7 - (i%8));
+}
+
+void Led_Manager::motor_power(int power){
+  int MAX_POWER = 2147483647;
+  int NUM_LEDS = 64;
+  int leds_on = round((double) power/MAX_POWER*NUM_LEDS);
+  unsigned char input[8] = {0};
+  for (int i=0; i < 8; i ++){
+    int turn_on  = 0;
+    if (leds_on >=8){
+        turn_on = 8;
+        leds_on -=8;
+    }
+    else if(leds_on >0){
+        turn_on = leds_on;
+        leds_on =0;
+    }
+    input[i] = getBinary(turn_on);
+  }
+  lightBarUpdate(input);
+
 }
 
 void Led_Manager::flexBackwards(){

@@ -8,6 +8,7 @@
 
 #define DASH_ID 2
 #define VCU_ID 3
+#define MOTOR_ID 4
 
 typedef struct Frame {
   unsigned int id;
