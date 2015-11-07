@@ -80,8 +80,9 @@ void Led_Manager::motor_power(int power){
     input[i] = getBinary(turn_on);
   }
   lightBarUpdate(input);
+}
 
-void doStuff(unsigned char input[8], unsigned char outer, unsigned char inner) {
+void Led_Manager::doStuff(unsigned char input[8], unsigned char outer, unsigned char inner) {
   if(inner == 8) {
     outer++;
     inner = 0;
@@ -90,7 +91,7 @@ void doStuff(unsigned char input[8], unsigned char outer, unsigned char inner) {
     }
   }
   input[outer] = inner;
-  lightBarUpdate(inner);
+  lightBarUpdate(input);
 }
 
 void Led_Manager::flexBackwards(){

@@ -9,6 +9,7 @@ class Led_Manager {
     void flex();
     void flexForwards();
     void flexBackwards();
+    void doStuff(unsigned char input[8], unsigned char outer, unsigned char inner);
   public:
     void begin();
     void rtd_off();
