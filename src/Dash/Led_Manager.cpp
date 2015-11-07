@@ -81,6 +81,16 @@ void Led_Manager::motor_power(int power){
   }
   lightBarUpdate(input);
 
+void doStuff(unsigned char input[8], unsigned char outer, unsigned char inner) {
+  if(inner == 8) {
+    outer++;
+    inner = 0;
+    if(outer == 8) {
+      return;
+    }
+  }
+  input[outer] = inner;
+  lightBarUpdate(inner);
 }
 
 void Led_Manager::flexBackwards(){
