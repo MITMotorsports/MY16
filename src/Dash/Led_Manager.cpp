@@ -62,6 +62,18 @@ unsigned int getBinary(unsigned int i){
   return 1 << (7 - (i%8));
 }
 
+void doStuff(unsigned char input[8], unsigned char outer, unsigned char inner) {
+  if(inner == 8) {
+    outer++;
+    inner = 0;
+    if(outer == 8) {
+      return;
+    }
+  }
+  input[outer] = inner;
+  lightBarUpdate(inner);
+}
+
 void Led_Manager::flexBackwards(){
   unsigned char input[8] = {0};
   for (int i =7; i>-1; i--){
