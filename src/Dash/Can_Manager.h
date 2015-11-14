@@ -8,7 +8,11 @@
 
 #define DASH_ID 2
 #define VCU_ID 3
-#define MOTOR_ID 4
+// Todo change to 486
+#define POSITIVE_MOTOR_ID 486
+// Todo change to 485
+#define NEGATIVE_MOTOR_ID 485
+#define BMS_SOC_ID 1574
 
 typedef struct Frame {
   unsigned int id;

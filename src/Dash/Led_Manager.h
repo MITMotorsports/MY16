@@ -10,10 +10,12 @@ class Led_Manager {
     void flexForwards();
     void flexBackwards();
     void doStuff(unsigned char input[8], unsigned char outer, unsigned char inner);
-  public:
-    void begin();
     void rtd_off();
     void rtd_on();
-    void motor_power(int power);
+  public:
+    void begin();
+    void set_rtd(bool value);
+    void set_lightbar_power(unsigned char power);
+    void set_lightbar_battery(unsigned char power);
 };
 #endif // LED_MANAGER_H
