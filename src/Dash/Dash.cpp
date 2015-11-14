@@ -116,9 +116,13 @@ void processVcuMessage(unsigned char message[8]) {
     Serial.println("Received start message");
     SoftTimer.remove(&blinkRTDTask);
     LED.set_rtd(true);
-    digitalWrite(DRS, HIGH);
-    //Turn off after 1333 ms delay
-    buzzerOffTask.startDelayed();
+    /*
+       TODO re-enable when necessary
+      digitalWrite(DRS, HIGH);
+      Turn off after 1333 ms delay
+      buzzerOffTask.startDelayed();
+
+    */
   }
   else {
     Serial.println("Received stop message");
