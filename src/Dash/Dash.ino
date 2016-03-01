@@ -11,7 +11,6 @@
 #include <avr/interrupt.h>
 #include <math.h>
 
-
 #include "Can_Manager.h"
 #include "Dash.h"
 #include "Led_Manager.h"

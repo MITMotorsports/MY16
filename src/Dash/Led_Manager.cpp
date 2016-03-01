@@ -14,6 +14,10 @@
 unsigned char zeros[8] = {0};
 
 unsigned char lightbar_state[8] = {0};
+
+unsigned char battery_reading = 0;
+unsigned char power_reading = 0;
+
 bool overheat = false;
 
 void Led_Manager::begin() {
@@ -75,6 +79,10 @@ unsigned int getBinary(unsigned int i){
 }
 
 void Led_Manager::set_lightbar_power(unsigned char value) {
+  if(value == power_reading) {
+    return;
+  }
+  power_reading = value;
   // Change range from [0:30] to [2:32] to simplify math
   value = value + 2;
   uint8_t num_full_bytes = value / 8;
@@ -108,6 +116,10 @@ void Led_Manager::set_lightbar_power(unsigned char value) {
 }
 
 void Led_Manager::set_lightbar_battery(unsigned char value) {
+  if(value == battery_reading) {
+    return;
+  }
+  battery_reading = value;
   uint8_t num_full_bytes = value / 8;
   uint8_t remaining_bits = value % 8;
   uint8_t remaining_bits_inverse = 8 - remaining_bits;
