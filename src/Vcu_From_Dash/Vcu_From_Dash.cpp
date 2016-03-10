@@ -4,32 +4,18 @@
 #include <math.h>
 
 //Magic timing library stuff
-#include <PciManager.h>
 #include <SoftTimer.h>
-#include <Debouncer.h>
 #include <DelayRun.h>
+#include <Debouncer.h>
 
 #include "Vcu_From_Dash.h"
-#include "Can_Manager.h"
-#include "Led_Manager.h"
+#include "Can_Controller.h"
+#include "Led_Controller.h"
+#include "Rtd_Controller.h"
+
+#include "Rtd_Handler.h"
 
 /***************** Prototypes *************/
-// Declare managers with default constructors
-Led_Manager LED;
-Can_Manager CAN;
-
-// Task functions for event tasks
-void RTDPressed();
-void RTDReleased(unsigned long pressTimespanMs);
-Debouncer debouncer(RTD_BUTTON, MODE_OPEN_ON_PUSH, RTDPressed, RTDReleased);
-
-// Task functions for timed tasks
-
-boolean enableFired = false;
-boolean buzzerOff(Task*);
-boolean enable(Task*);
-DelayRun buzzerOffTask(1333, buzzerOff);
-DelayRun enableTask(500, enable);
 
 // CAN gets highest priority
 void readCAN(Task*);
@@ -38,61 +24,30 @@ void processVcuMessage(unsigned char message[8]);
 void processSpeedMessage(unsigned char message[8], int sign);
 void processBMSMessage(unsigned char message[8]);
 
-void blinkRTD(Task*);
-Task blinkRTDTask(333, blinkRTD);
-boolean RTDState = false;
+//TODO place all handlers in a hash table keyed on CAN ID
+Rtd_Handler rtd_handler = Rtd_Handler();
+
 /***************** End Prototypes *********/
 
 void setup() {
   Serial.begin(115200);
-  CAN.begin();
-  LED.begin();
 
-  // Start interrupt and CAN read loop
-  SoftTimer.add(&readCanTask);
-  PciManager.registerListener(RTD_BUTTON, &debouncer);
-}
+  // Blocking call -- will delay until this is complete
+  LED().flex();
 
-boolean enable(Task*) {
-  // no need for a lock on this variable since single threaded
-  enableFired = true;
-  Serial.println("Sent start message");
-  CAN.write(ENABLE_REQUEST);
-  // False means don't execute follow-up task
-  return false;
-}
-
-void RTDPressed() {
-  // The enable task will fire automatically if held for >1000ms
-  enableFired = false;
-  enableTask.startDelayed();
-}
-
-void RTDReleased(unsigned long) {
-  if(!enableFired) {
-    // Wasn't held for 1000ms so handle as disable message and cancel enable handler
-    SoftTimer.remove(&enableTask);
-    Serial.println("Sent stop message");
-    CAN.write(DISABLE_REQUEST);
-  }
-}
-
-// called by buzzerOffTask
-boolean buzzerOff(Task*) {
-  digitalWrite(DRS, LOW);
-  Serial.println("Stopped buzzer");
-  // False means don't execute follow-up task
-  return false;
+  // Now start CAN read loop and button interrupt
+  // SoftTimer.add(&readCanTask);
+  rtd_handler.begin();
 }
 
 // called by readCanTask
 void readCAN(Task*) {
   // If no message, break early
-  if(!CAN.msgAvailable()) { return; }
-  Frame frame = CAN.read();
+  if(!CAN().msgAvailable()) { return; }
+  Frame frame = CAN().read();
   switch(frame.id) {
     case VCU_ID:
-      processVcuMessage(frame.message);
+      rtd_handler.handleMessage(frame);
       break;
     case POSITIVE_MOTOR_ID:
       processSpeedMessage(frame.message, 1);
@@ -103,31 +58,6 @@ void readCAN(Task*) {
     case BMS_SOC_ID:
       processBMSMessage(frame.message);
       break;
-  }
-}
-
-void blinkRTD(Task*) {
-  RTDState = !RTDState;
-  LED.set_rtd(RTDState);
-}
-
-void processVcuMessage(unsigned char message[8]) {
-  if(message[0]) {
-    Serial.println("Received start message");
-    SoftTimer.remove(&blinkRTDTask);
-    LED.set_rtd(true);
-    /*
-       TODO re-enable when necessary
-      digitalWrite(DRS, HIGH);
-      Turn off after 1333 ms delay
-      buzzerOffTask.startDelayed();
-
-    */
-  }
-  else {
-    Serial.println("Received stop message");
-    RTDState = false;
-    SoftTimer.add(&blinkRTDTask);
   }
 }
 
@@ -144,7 +74,7 @@ void processSpeedMessage(unsigned char message[8], int sign){
       // This magic number is just 32767/30 rounded
       int scaling_factor = 1092;
       unsigned char scaled_speed = (speed * sign) / scaling_factor;
-      LED.set_lightbar_power(scaled_speed);
+      LED().set_lightbar_power(scaled_speed);
   }
 }
 
@@ -153,6 +83,6 @@ void processBMSMessage(unsigned char message[8]){
   // Scale SOC from [0:100] to [0:30]
   double scaling_factor = 3.33333;
   SOC = SOC / scaling_factor;
-  LED.set_lightbar_battery(SOC);
+  LED().set_lightbar_battery(SOC);
 }
 
