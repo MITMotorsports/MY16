@@ -61,10 +61,25 @@ void Dispatch_Controller::enable() {
   enabled = true;
 }
 
+void logMessage(Frame& frame) {
+  Serial.print(F("Begin Message on id "));
+  Serial.print(frame.id);
+  Serial.print(" (0x");
+  Serial.print(frame.id, HEX);
+  Serial.print(") ");
+  Serial.print(": ");
+  for(int i = 0; i < 8; i++) {
+    Serial.print(frame.body[i]);
+    Serial.print(" ");
+  }
+  Serial.println("");
+}
+
 void Dispatch_Controller::dispatch() {
   // If no message, break early
   if(!CAN().msgAvailable()) { return; }
   Frame frame = CAN().read();
+  logMessage(frame);
   switch(frame.id) {
     case VCU_ID:
       rtd_handler.handleMessage(frame);
