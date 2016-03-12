@@ -11,6 +11,12 @@ bool overheat = false;
 
 Led_Controller* Led_Controller::instance = NULL;
 
+Led_Controller::Led_Controller() 
+: begun(false)
+{
+  // Initialization done above
+}
+
 Led_Controller& Led_Controller::getInstance() {
   if(!instance) {
     instance = new Led_Controller();
@@ -24,6 +30,10 @@ Led_Controller& LED() {
 }
 
 void Led_Controller::begin() {
+  if(begun) {
+    return;
+  }
+  begun = true;
   pinMode(0, OUTPUT);
   pinMode(1, OUTPUT);
   pinMode(LED_SERIAL, OUTPUT);

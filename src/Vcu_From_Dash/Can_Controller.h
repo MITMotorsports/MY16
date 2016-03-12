@@ -6,23 +6,10 @@
 const int MCP_INT = 9;
 const int MCP_CS = 10;
 
-const int DASH_ID = 2;
-const int VCU_ID = 3;
-
-// 0x1e6
-const int POSITIVE_MOTOR_ID = 486;
-// 0x1e5
-const int NEGATIVE_MOTOR_ID = 485;
-// 0x626
-const int BMS_SOC_ID = 1574;
-
 typedef struct Frame {
   unsigned int id;
-  unsigned char message[8];
+  unsigned char body[8];
 } Frame;
-
-extern Frame ENABLE_REQUEST;
-extern Frame DISABLE_REQUEST;
 
 class Can_Controller {
   public:
@@ -36,6 +23,7 @@ class Can_Controller {
     MCP_CAN delegate = MCP_CAN(MCP_CS);
     Can_Controller();
     static Can_Controller *instance;
+    bool begun;
 };
 
 // Singleton accessor declaration

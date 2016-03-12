@@ -17,11 +17,12 @@ class Led_Controller {
     void set_lightbar_power(unsigned char power);
     void set_lightbar_battery(unsigned char power);
   private:
-    static Led_Controller *instance;
+    Led_Controller();
     void lightBarUpdate(unsigned char states[8]);
     void flexForwards();
     void flexBackwards();
-    bool initialized;
+    static Led_Controller *instance;
+    bool begun;
 };
 
 // Singleton accessor declaration

@@ -21,6 +21,15 @@ void Buzzer::disable() {
   Serial.println(F("Buzzer Disabled"));
 }
 
+bool buzzerOff(Task*) {
+  digitalWrite(DRS, LOW);
+  Serial.println(F("Buzzer Stopped"));
+  // False means don't execute follow-up task
+  return false;
+}
+
+DelayRun buzzerOffTask(1333, buzzerOff);
+
 void Buzzer::trigger(int ms) {
   Serial.println(F("Buzzer Triggered"));
   // If the noise is annoying, don't do it
@@ -28,14 +37,7 @@ void Buzzer::trigger(int ms) {
     return;
   }
 
-  // Create callback for turning buzzer off
-  DelayRun buzzerOffTask(ms, [] (Task*) {
-    digitalWrite(DRS, LOW);
-    Serial.println(F("Buzzer Stopped"));
-    // False means don't execute follow-up task
-    return false;
-  });
-
   digitalWrite(DRS, HIGH);
+  buzzerOffTask.setPeriodMs(ms);
   buzzerOffTask.startDelayed();
 }

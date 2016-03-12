@@ -7,12 +7,17 @@ Rtd_Controller* Rtd_Controller::instance = NULL;
 Rtd_Controller::Rtd_Controller()
 : enabled(false),
   buzzer(true),
-  light()
+  light(),
+  begun(false)
 {
   // Initialization done above
 }
 
 void Rtd_Controller::begin() {
+  if(begun) {
+    return;
+  }
+  begun = true;
   Serial.println(F("RTD Begun"));
   buzzer.begin();
   light.begin();

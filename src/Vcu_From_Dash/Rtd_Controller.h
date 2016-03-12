@@ -20,6 +20,7 @@ class Rtd_Controller {
     bool enabled;
     Buzzer buzzer;
     Rtd_Light light;
+    bool begun;
 };
 
 // Singleton accessor declaration

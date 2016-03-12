@@ -3,20 +3,35 @@
 
 #include "Rtd_Handler.h"
 #include "Rtd_Controller.h"
+#include "Dispatch_Controller.h"
+
+const int RTD_BUTTON = 6;
 
 // Non-member variable used in timer function pointers
 bool enableFired = false;
 
-bool enable(Task*) {
+void enableAll() {
   enableFired = true;
-  // Tell dash to enable
   RTD().enable();
-  // Tell VCU to enable
-  CAN().write(ENABLE_REQUEST);
-  return false;
+  Dispatcher().enable();
+  Frame enableMessage = { .id=DASH_ID, .body={1}};
+  CAN().write(enableMessage);
   Serial.println(F("Rtd_Handler Enabled"));
 }
 
+void disableAll() {
+  enableFired = false;
+  RTD().disable();
+  Dispatcher().enable();
+  Frame disableMessage = { .id=DASH_ID, .body={0}};
+  CAN().write(disableMessage);
+  Serial.println(F("Rtd_Handler Disabled"));
+}
+
+bool enable(Task*) {
+  enableAll();
+  return false;
+}
 DelayRun enableTask(500, enable);
 
 void RTDPressed() {
@@ -33,11 +48,7 @@ void RTDReleased(unsigned long) {
   else {
     // Button released before 1000ms, so driver must want to disable
     SoftTimer.remove(&enableTask);
-    // Tell dash to disable
-    RTD().disable();
-    // Tell VCU to disable
-    CAN().write(DISABLE_REQUEST);
-    Serial.println(F("Rtd_Handler Disabled"));
+    disableAll();
   }
 }
 
@@ -47,17 +58,18 @@ Debouncer debouncer(RTD_BUTTON, MODE_OPEN_ON_PUSH, RTDPressed, RTDReleased);
 void Rtd_Handler::begin() {
   pinMode(RTD_BUTTON, INPUT);
   PciManager.registerListener(RTD_BUTTON, &debouncer);
-  Serial.println(F("Rtd_Handler Begin"));
+  RTD().disable();
+  Serial.println(F("Rtd_Handler Begun"));
 }
 
 void Rtd_Handler::handleMessage(Frame& frame) {
-  if(frame.message[0]) {
+  if(frame.body[0]) {
     Serial.println(F("Received start message"));
-    RTD().enable();
+    enableAll();
   }
   else {
     Serial.println(F("Received stop message"));
-    RTD().disable();
+    disableAll();
   }
 }
 

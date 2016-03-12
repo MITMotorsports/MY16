@@ -4,7 +4,8 @@
 #include "Handler.h"
 #include "Can_Controller.h"
 
-const int RTD_BUTTON = 6;
+const int DASH_ID = 2;
+const int VCU_ID = 3;
 
 class Rtd_Handler : public Handler {
   public:
