@@ -10,26 +10,9 @@ const int RTD_BUTTON = 6;
 // Non-member variable used in timer function pointers
 bool enableFired = false;
 
-void enableAll() {
-  enableFired = true;
-  RTD().enable();
-  Dispatcher().enable();
-  Frame enableMessage = { .id=DASH_ID, .body={1}};
-  CAN().write(enableMessage);
-  Serial.println(F("Rtd_Handler Enabled"));
-}
-
-void disableAll() {
-  enableFired = false;
-  RTD().disable();
-  Dispatcher().enable();
-  Frame disableMessage = { .id=DASH_ID, .body={0}};
-  CAN().write(disableMessage);
-  Serial.println(F("Rtd_Handler Disabled"));
-}
-
 bool enable(Task*) {
-  enableAll();
+  enableFired = true;
+  Dispatcher().enable();
   return false;
 }
 DelayRun enableTask(500, enable);
@@ -48,7 +31,8 @@ void RTDReleased(unsigned long) {
   else {
     // Button released before 1000ms, so driver must want to disable
     SoftTimer.remove(&enableTask);
-    disableAll();
+    enableFired = false;
+    Dispatcher().disable();
   }
 }
 
@@ -59,17 +43,19 @@ void Rtd_Handler::begin() {
   pinMode(RTD_BUTTON, INPUT);
   PciManager.registerListener(RTD_BUTTON, &debouncer);
   RTD().disable();
-  Serial.println(F("Rtd_Handler Begun"));
 }
 
 void Rtd_Handler::handleMessage(Frame& frame) {
-  if(frame.body[0]) {
-    Serial.println(F("Received start message"));
-    enableAll();
+  if(frame.id != VCU_ID) {
+    return;
   }
   else {
-    Serial.println(F("Received stop message"));
-    disableAll();
+    if(frame.body[0]) {
+      Dispatcher().enable();
+    }
+    else {
+      Dispatcher().disable();
+    }
   }
 }
 

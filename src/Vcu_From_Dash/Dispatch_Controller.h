@@ -2,7 +2,9 @@
 #define DISPATCH_CONTROLLER_H
 
 #include "Rtd_Handler.h"
-#include "Led_Handler.h"
+#include "Can_Node_Handler.h"
+#include "Bms_Handler.h"
+#include "Motor_Handler.h"
 
 class Dispatch_Controller {
   public:
@@ -11,12 +13,15 @@ class Dispatch_Controller {
     void disable();
     void enable();
     void dispatch();
+    void requestUpdates();
   private:
     Dispatch_Controller();
     void performEnableActions(Frame& frame);
     static Dispatch_Controller *instance;
     Rtd_Handler rtd_handler;
-    Led_Handler led_handler;
+    Can_Node_Handler can_node_handler;
+    Bms_Handler bms_handler;
+    Motor_Handler motor_handler;
     bool begun;
     bool enabled;
 };

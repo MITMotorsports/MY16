@@ -16,21 +16,18 @@ Task blinkRTDTask(RTD_PERIOD, blinkRTD);
 
 // Called at program setup (turns light off)
 void Rtd_Light::begin() {
-  Serial.println(F("Rtd_Light Begun"));
   pinMode(RTD_LED, OUTPUT);
   set_rtd_light(false);
 }
 
 // Turn RTD light on
 void Rtd_Light::enable() {
-  Serial.println(F("Rtd_Light Enabled"));
   SoftTimer.remove(&blinkRTDTask);
   set_rtd_light(true);
 }
 
 // Start blinking RTD light
 void Rtd_Light::disable(int period) {
-  Serial.println(F("Rtd_Light Disabled"));
   SoftTimer.remove(&blinkRTDTask);
   light_swap = true;
   blinkRTDTask.setPeriodMs(period);

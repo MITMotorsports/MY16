@@ -14,19 +14,27 @@
 
 Dispatch_Controller::Dispatch_Controller()
 : rtd_handler(Rtd_Handler()),
-  led_handler(Led_Handler()),
+  can_node_handler(Can_Node_Handler()),
+  bms_handler(Bms_Handler()),
+  motor_handler(Motor_Handler()),
   begun(false),
   enabled(false)
 {
 
 }
 
-// Slight hack: invoke static member accessor function in non-member function pointer to work with SoftTimer's bullshit
-void step(Task*) {
+// Slight hack: invoke static member accessor function in non-member function
+// pointer to work with SoftTimer's bullshit.
+// TODO: Tighten this loop if perf problems arise
+void dispatchPointer(Task*) {
   Dispatcher().dispatch();
 }
-// TODO: Tighten this loop if perf problems arise
-Task stepTask(0, step);
+Task stepTask(0, dispatchPointer);
+
+void requestUpdatesPointer(Task*) {
+  Dispatcher().requestUpdates();
+}
+Task requestUpdatesTask(500, requestUpdatesPointer);
 
 void Dispatch_Controller::begin() {
   if(begun) {
@@ -34,8 +42,13 @@ void Dispatch_Controller::begin() {
   }
   begun = true;
   rtd_handler.begin();
-  led_handler.begin();
+  can_node_handler.begin();
+  bms_handler.begin();
+  motor_handler.begin();
   SoftTimer.add(&stepTask);
+  Serial.println("");
+  Serial.println("VEHICLE_POWERED_ON");
+  Serial.println("");
 }
 
 // Must define instance prior to use
@@ -55,23 +68,23 @@ Dispatch_Controller& Dispatcher() {
 
 void Dispatch_Controller::disable() {
   enabled = false;
+  RTD().disable();
+  Frame disableMessage = { .id=DASH_ID, .body={0}};
+  CAN().write(disableMessage);
+  SoftTimer.remove(&requestUpdatesTask);
+  Serial.println("");
+  Serial.println("VEHICLE_DISABLED");
+  Serial.println("");
 }
 
 void Dispatch_Controller::enable() {
   enabled = true;
-}
-
-void logMessage(Frame& frame) {
-  Serial.print(F("Begin Message on id "));
-  Serial.print(frame.id);
-  Serial.print(" (0x");
-  Serial.print(frame.id, HEX);
-  Serial.print(") ");
-  Serial.print(": ");
-  for(int i = 0; i < 8; i++) {
-    Serial.print(frame.body[i]);
-    Serial.print(" ");
-  }
+  RTD().enable();
+  Frame enableMessage = { .id=DASH_ID, .body={1}};
+  CAN().write(enableMessage);
+  SoftTimer.add(&requestUpdatesTask);
+  Serial.println("");
+  Serial.println("VEHICLE_ENABLED");
   Serial.println("");
 }
 
@@ -79,23 +92,18 @@ void Dispatch_Controller::dispatch() {
   // If no message, break early
   if(!CAN().msgAvailable()) { return; }
   Frame frame = CAN().read();
-  logMessage(frame);
-  switch(frame.id) {
-    case VCU_ID:
-      rtd_handler.handleMessage(frame);
-      break;
-    case POSITIVE_MOTOR_ID:
-    case NEGATIVE_MOTOR_ID:
-    case BMS_SOC_ID:
-      led_handler.handleMessage(frame);
-      break;
-  }
+  rtd_handler.handleMessage(frame);
+  bms_handler.handleMessage(frame);
   if(enabled) {
     performEnableActions(frame);
   }
 }
 
-void Dispatch_Controller::performEnableActions(Frame&) {
-  // Nothing for now
+void Dispatch_Controller::performEnableActions(Frame& frame) {
+  can_node_handler.handleMessage(frame);
+  motor_handler.handleMessage(frame);
 }
 
+void Dispatch_Controller::requestUpdates() {
+  motor_handler.requestAllUpdates();
+}
