@@ -24,6 +24,7 @@ class Can_Controller {
     Can_Controller();
     static Can_Controller *instance;
     bool begun;
+    String canResponseToString(uint8_t result);
 };
 
 // Singleton accessor declaration
