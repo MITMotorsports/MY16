@@ -17,17 +17,21 @@ Can_Controller& Can_Controller::getInstance() {
   return *instance;
 }
 
-// Lazy shortcut
 Can_Controller& CAN() {
   return Can_Controller::getInstance();
 }
 
 void Can_Controller::begin() {
+  // Idempotent
   if (begun) {
     return;
   }
   begun = true;
+
+  // Set interrupt pin.
+  // DON'T set MCP_CS: mcp_can library does it for us
   pinMode(MCP_INT, INPUT);
+
   if (delegate.begin(CAN_500KBPS) != CAN_OK) {
     Serial.print(F("Error when enabling CAN"));
   }
@@ -39,17 +43,8 @@ bool Can_Controller::msgAvailable() {
 
 Frame Can_Controller::read() {
   Frame frame;
-  unsigned char len = 0;
+  delegate.readMsgBuf(&frame.len, frame.body);
   frame.id = delegate.getCanId();
-  delegate.readMsgBuf(&len, frame.body);
-  // int result = delegate.readMsgBuf(&len, frame.body);
-  // Serial.print("Msg RECV on id ");
-  // Serial.print(frame.id);
-  // Serial.print(", result: ");
-  // Serial.print(canResponseToString(result));
-  // Serial.print(", timestamp: ");
-  // Serial.print(millis());
-  // Serial.println("");
   return frame;
 }
 
@@ -89,14 +84,5 @@ String Can_Controller::canResponseToString(uint8_t response) {
 }
 
 void Can_Controller::write(Frame f) {
-  // int result = delegate.sendMsgBuf(f.id, 0, 8, f.body);
-  // Serial.print("Msg send on id ");
-  // Serial.print(f.id);
-  // Serial.print(", result: ");
-  // Serial.print(canResponseToString(result));
-  // Serial.print(", timestamp: ");
-  // Serial.print(millis());
-  // Serial.println("");
-  delegate.sendMsgBuf(f.id, 0, 8, f.body);
+  delegate.sendMsgBuf(f.id, 0, f.len, f.body);
 }
-
