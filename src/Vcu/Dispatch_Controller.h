@@ -14,6 +14,7 @@ class Dispatch_Controller {
     void enable();
     void dispatch();
     void requestUpdates();
+    bool isEnabled();
   private:
     Dispatch_Controller();
     void performEnableActions(Frame& frame);

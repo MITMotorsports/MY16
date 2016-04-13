@@ -6,6 +6,9 @@ void Bms_Handler::begin() {
 
 void Bms_Handler::handleMessage(Frame& message) {
   switch(message.id) {
+    case BMS_SUMMARY_ID:
+      handleSummaryMessage(message);
+      break;
     case BMS_FAULT_ID:
       break;
     case BMS_VOLTAGE_ID:
@@ -74,3 +77,17 @@ void Bms_Handler::handleTempMessage(Frame& message) {
   logCellMessage("max_temp", message.body[5], max_temp, "degrees");
 }
 
+void Bms_Handler::handleSummaryMessage(Frame& message) {
+  uint16_t total_volts = mergeBytes(message.body[1], message.body[0]);
+  logPackMessage("fast_total_voltage", total_volts, "volts");
+
+  uint16_t total_current = mergeBytes(message.body[3], message.body[2]);
+  int16_t signed_current = (int16_t) total_current;
+  logPackMessage("fast_total_current", signed_current, "amps");
+
+  unsigned char temp = message.body[4];
+  logPackMessage("fast_total_temp", temp, "degrees");
+
+  unsigned char SOC = message.body[5];
+  logPackMessage("fast_SOC", SOC, "percent");
+}

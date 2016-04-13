@@ -9,6 +9,7 @@ const int MCP_CS = 53;
 typedef struct Frame {
   unsigned int id;
   unsigned char body[8];
+  unsigned char len;
 } Frame;
 
 class Can_Controller {

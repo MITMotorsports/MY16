@@ -15,6 +15,7 @@ class Bms_Handler : public Handler {
     void handleVoltageMessage(Frame& message);
     void handleCurrentMessage(Frame& message);
     void handleTempMessage(Frame& message);
+    void handleSummaryMessage(Frame& message);
 };
 
 #endif // BMS_HANDLER_H
