@@ -1,46 +1,39 @@
 #include <Arduino.h>
-//Magic timing library stuff
-#include <SoftTimer.h>
-#include <DelayRun.h>
-#include <Debouncer.h>
+
+#include "Can_Node.h"
 
 #include "Can_Controller.h"
+#include "Pins.h"
 
-// Pins
-const int STARBOARD_THROTTLE_PIN = A0;
-const int PORT_THROTTLE_PIN = A1;
-// TODO change once we know exactly which pins these go on
-const int STARBOARD_ENCODER_PIN = 2;
-const int PORT_ENCODER_PIN = 3;
+const unsigned char ANALOG_MESSAGE_ID = 0x01;
+const unsigned char RPM_MESSAGE_ID = 0x10;
 
 const float STARBOARD_THROTTLE_SCALE = 0.3643;
 const float PORT_THROTTLE_SCALE = STARBOARD_THROTTLE_SCALE;
 const int STARBOARD_THROTTLE_OFFSET = 0;
 const int PORT_THROTTLE_OFFSET = -5;
 
-const float REVOLUTIONS_PER_CLICK = 1.0 / 22.0;
+const int RPM_MESSAGE_PERIOD = 100;
+const int RPM_READING_PERIOD = 10;
+const unsigned int MOVING_AVG_WIDTH = RPM_MESSAGE_PERIOD / RPM_READING_PERIOD;
+
+const int ANALOG_MESSAGE_PERIOD = 100;
+
+const int CLICKS_PER_REVOLUTION = 22;
+const float REVOLUTIONS_PER_CLICK = 1.0 / CLICKS_PER_REVOLUTION;
 const unsigned long MICROS_PER_MIN = 60000000;
 
-unsigned long lastTime = 0;
+unsigned int portRpms[MOVING_AVG_WIDTH];
+unsigned int starboardRpms[MOVING_AVG_WIDTH];
+unsigned int rpmIndex = 0;
 
+unsigned long lastRpmTime = 0;
 volatile unsigned int starboardClicks = 0;
 volatile unsigned int portClicks = 0;
 
-Frame rpmMessage = {
-  .id=0x10,
-  .body={0,0,0,0},
-  .len=4
-};
-
-// Prototypes
-void logStarboardEncoderClick();
-void logPortEncoderClick();
-
-void sendCanMessage(Task*);
-Task sendCanTask(100, sendCanMessage);
-
-void integrateEncoderReadings(Task*);
-Task integrateEncoderReadingsTask(50, integrateEncoderReadings);
+Task recordRpmTask(RPM_READING_PERIOD, recordRpm);
+Task sendRpmCanMessageTask(RPM_MESSAGE_PERIOD, sendRpmCanMessage);
+Task sendAnalogCanMessageTask(ANALOG_MESSAGE_PERIOD, sendAnalogCanMessage);
 
 // Implementation
 void setup() {
@@ -55,10 +48,11 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(STARBOARD_ENCODER_PIN), logPortEncoderClick, RISING);
   attachInterrupt(digitalPinToInterrupt(PORT_ENCODER_PIN), logStarboardEncoderClick, RISING);
 
-  SoftTimer.add(&sendCanTask);
-  SoftTimer.add(&integrateEncoderReadingsTask);
+  SoftTimer.add(&recordRpmTask);
+  SoftTimer.add(&sendAnalogCanMessageTask);
+  SoftTimer.add(&sendAnalogCanMessageTask);
 
-  lastTime = micros();
+  resetClicksAndTimer(micros());
 }
 
 void logStarboardEncoderClick() {
@@ -69,75 +63,102 @@ void logPortEncoderClick() {
   portClicks++;
 }
 
-int truncate_to_byte(int val) {
+int truncateToByte(int val) {
   val = min(val, 255);
   val = max(val, 0);
   return val;
 }
 
-unsigned char reading_to_can(const int val, const float scale, const int offset=0) {
+unsigned char readingToCan(const int val, const float scale, const int offset=0) {
   const float scaled_val = ((float)val) * scale;
   const int offset_val = round(scaled_val) + offset;
-  const int bounded_val = truncate_to_byte(offset_val);
-  const unsigned char short_val = (unsigned char)(bounded_val);
+  const int bounded_val = truncateToByte(offset_val);
+  unsigned char short_val = (unsigned char)(bounded_val);
   return short_val;
 }
 
-void sendCanMessage(Task*) {
+void sendAnalogCanMessage(Task*) {
   const int starboard_raw = analogRead(STARBOARD_THROTTLE_PIN);
   const int port_raw = analogRead(PORT_THROTTLE_PIN);
-  const unsigned char starboard_scaled = reading_to_can(
+  const unsigned char starboard_scaled = readingToCan(
     starboard_raw,
     STARBOARD_THROTTLE_SCALE,
     STARBOARD_THROTTLE_OFFSET
   );
-  const unsigned char port_scaled = reading_to_can(
+  const unsigned char port_scaled = readingToCan(
     port_raw,
     PORT_THROTTLE_SCALE,
     PORT_THROTTLE_OFFSET
   );
-  Frame message = {.id=1, .body={starboard_scaled, port_scaled}};
+  Frame message = {.id=1, .body={starboard_scaled, port_scaled}, .len=2};
   CAN().write(message);
 }
 
-inline unsigned int toRpm(const unsigned long clicks, const unsigned long mics) {
+unsigned int toRpm(const unsigned long clicks, const unsigned long micros) {
+  // IMPORTANT: don't change the order of these operations,
+  // otherwise overflow might occur due to 32-bit resolution
   const float revs = clicks * REVOLUTIONS_PER_CLICK;
-  const float revsPerMicro = revs / mics;
-  const float revsPerMinute = revsPerMicro * MICROS_PER_MIN;
+  const float revsPerMinute = (revs / micros) * MICROS_PER_MIN;
   return round(revsPerMinute);
 }
 
-inline void sendRpmMessage(const unsigned int starboardRpm, const unsigned int portRpm) {
-  rpmMessage.body[0] = highByte(starboardRpm);
-  rpmMessage.body[1] = lowByte(starboardRpm);
-  rpmMessage.body[2] = highByte(portRpm);
-  rpmMessage.body[3] = lowByte(portRpm);
-  CAN().write(rpmMessage);
-}
-
-inline void resetClicksAndTimer(const unsigned long curr) {
-  lastTime = curr;
+void resetClicksAndTimer(const unsigned long curr) {
+  lastRpmTime = curr;
   starboardClicks = 0;
   portClicks = 0;
 }
 
-void integrateEncoderReadings(Task*) {
+void recordRpm(Task*) {
   // Cache values all at once for most accurate reading
   const unsigned long currTime = micros();
   const unsigned int cachedStarboardClicks = starboardClicks;
   const unsigned int cachedPortClicks = portClicks;
 
   // Once every ~70 minutes, micros() overflows back to zero.
-  const bool timeNotOverflowed = currTime >= lastTime;
+  const bool timeOverflowed = currTime < lastRpmTime;
 
   // Go ahead and reset now so that interrupts can get back to work
   resetClicksAndTimer(currTime);
 
-  // Perform RPM calculations unless timer overflowed this cycle
-  if(timeNotOverflowed) {
-    const unsigned long dt = currTime - lastTime;
-    const unsigned int starboardRpm = toRpm(cachedStarboardClicks, dt);
-    const unsigned int portRpm = toRpm(cachedPortClicks, dt);
-    sendRpmMessage(starboardRpm, portRpm);
+  if(timeOverflowed) {
+    //Timer overflowed, do nothing this cycle
+    return;
   }
+
+  // Perform actual RPM calculations
+  const unsigned long dt = currTime - lastRpmTime;
+  const unsigned int starboardRpm = toRpm(cachedStarboardClicks, dt);
+  const unsigned int portRpm = toRpm(cachedPortClicks, dt);
+
+  // Record result, overwrite oldest existing record
+  starboardRpms[rpmIndex] = starboardRpm;
+  portRpms[rpmIndex] = portRpm;
+  rpmIndex = (rpmIndex + 1) % MOVING_AVG_WIDTH;
+}
+
+void sendRpmCanMessage(Task*) {
+  // Count total rpms
+  unsigned long totStarboardRpm = 0;
+  unsigned long totPortRpm = 0;
+  for(unsigned int i = 0; i < MOVING_AVG_WIDTH; i++) {
+    totStarboardRpm += starboardRpms[i];
+    totPortRpm += portRpms[i];
+  }
+
+  // Average rpms
+  unsigned int avgStarboardRpm = totStarboardRpm / MOVING_AVG_WIDTH;
+  unsigned int avgPortRpm = totPortRpm / MOVING_AVG_WIDTH;
+
+  // Generate and send message
+  Frame rpmMessage = {
+    .id=0x10,
+    .body={
+      highByte(avgStarboardRpm),
+      lowByte(avgStarboardRpm),
+      highByte(avgPortRpm),
+      lowByte(avgPortRpm)
+    },
+    .len=4
+  };
+  CAN().write(rpmMessage);
 }
