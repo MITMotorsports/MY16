@@ -1,4 +1,5 @@
 #include "Buzzer.h"
+#include "Pins.h"
 
 Buzzer::Buzzer(bool _enabled) 
 : enabled(_enabled)
@@ -7,7 +8,7 @@ Buzzer::Buzzer(bool _enabled)
 }
 
 void Buzzer::begin() {
-  pinMode(DRS, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
 }
 
 void Buzzer::enable() {
@@ -19,7 +20,7 @@ void Buzzer::disable() {
 }
 
 bool buzzerOff(Task*) {
-  digitalWrite(DRS, LOW);
+  digitalWrite(BUZZER_PIN, LOW);
   // False means don't execute follow-up task
   return false;
 }
@@ -32,7 +33,7 @@ void Buzzer::trigger(int ms) {
     return;
   }
 
-  digitalWrite(DRS, HIGH);
+  digitalWrite(BUZZER_PIN, HIGH);
   buzzerOffTask.setPeriodMs(ms);
   buzzerOffTask.startDelayed();
 }

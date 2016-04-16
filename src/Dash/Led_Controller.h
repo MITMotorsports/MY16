@@ -5,10 +5,6 @@
 #include <avr/interrupt.h>
 #include <math.h>
 
-const int LED_SERIAL = 2;
-const int LED_CLK = 3;
-const int LED_LATCH = 4;
-
 class Led_Controller {
   public:
     static Led_Controller& getInstance();

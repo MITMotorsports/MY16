@@ -2,7 +2,7 @@
 
 // shortcut macro
 void set_rtd_light(bool status) {
-  digitalWrite(RTD_LED, status);
+  digitalWrite(RTD_LED_PIN, status);
 }
 
 // Have to statically allocate these, otherwise they will
@@ -16,7 +16,7 @@ Task blinkRTDTask(RTD_PERIOD, blinkRTD);
 
 // Called at program setup (turns light off)
 void Rtd_Light::begin() {
-  pinMode(RTD_LED, OUTPUT);
+  pinMode(RTD_LED_PIN, OUTPUT);
   set_rtd_light(false);
 }
 

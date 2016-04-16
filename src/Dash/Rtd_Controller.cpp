@@ -8,7 +8,7 @@ const int MC_ENABLE_PORT = 7;
 // Private constructor
 Rtd_Controller::Rtd_Controller()
 : enabled(false),
-  buzzer(false),
+  buzzer(true),
   light(),
   begun(false)
 {
@@ -22,8 +22,6 @@ void Rtd_Controller::begin() {
   begun = true;
   buzzer.begin();
   light.begin();
-  //TODO
-  digitalWrite(MC_ENABLE_PORT, LOW);
 }
 
 Rtd_Controller& Rtd_Controller::getInstance() {
@@ -42,15 +40,11 @@ void Rtd_Controller::enable() {
     enabled = true;
     buzzer.trigger(1333);
     light.enable();
-    //TODO change this to whatever we set motor control enable to
-    digitalWrite(MC_ENABLE_PORT, HIGH);
 }
 
 void Rtd_Controller::disable() {
     enabled = false;
     light.disable();
-    //TODO change this to whatever we set motor control enable to
-    digitalWrite(MC_ENABLE_PORT, LOW);
 }
 
 bool Rtd_Controller::isEnabled() {

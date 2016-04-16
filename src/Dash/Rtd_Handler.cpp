@@ -1,26 +1,37 @@
-#include <Debouncer.h>
-#include <PciManager.h>
-
 #include "Rtd_Handler.h"
-#include "Rtd_Controller.h"
-#include "Dispatch_Controller.h"
-
-const int RTD_BUTTON = 6;
 
 // Non-member variable used in timer function pointers
 bool enableFired = false;
 
-bool enable(Task*) {
-  enableFired = true;
-  Dispatcher().enable();
+Debouncer debouncer(RTD_BUTTON_PIN, MODE_OPEN_ON_PUSH, RTDPressed, RTDReleased);
+
+void Rtd_Handler::begin() {
+  pinMode(RTD_BUTTON_PIN, INPUT);
+  LED().begin();
+  RTD().begin();
+  PciManager.registerListener(RTD_BUTTON_PIN, &debouncer);
+}
+
+void sendEnableRequest() {
+  Frame enableMessage = { .id=DASH_ID, .body={1}};
+  CAN().write(enableMessage);
+}
+
+void sendDisableRequest() {
+  Frame disableMessage = { .id=DASH_ID, .body={0}};
+  CAN().write(disableMessage);
+}
+
+bool sendEnableRequestWrapper(Task*) {
+  sendEnableRequest();
   return false;
 }
-DelayRun enableTask(500, enable);
+DelayRun sendEnableRequestTask(500, sendEnableRequestWrapper);
 
 void RTDPressed() {
   // The enable task will fire automatically if held for >1000ms
   enableFired = false;
-  enableTask.startDelayed();
+  sendEnableRequestTask.startDelayed();
 }
 
 void RTDReleased(unsigned long) {
@@ -30,33 +41,53 @@ void RTDReleased(unsigned long) {
   }
   else {
     // Button released before 1000ms, so driver must want to disable
-    SoftTimer.remove(&enableTask);
+    SoftTimer.remove(&sendEnableRequestTask);
     enableFired = false;
-    Dispatcher().disable();
   }
 }
 
-// Must be declared at global scope in order to preserve reference
-Debouncer debouncer(RTD_BUTTON, MODE_OPEN_ON_PUSH, RTDPressed, RTDReleased);
+void Rtd_Handler::processVcuMessage(Frame& message) {
+  if(message.body[0]) {
+    RTD().enable();
+  }
+  else {
+    RTD().disable();
+  }
+}
 
-void Rtd_Handler::begin() {
-  pinMode(RTD_BUTTON, INPUT);
-  PciManager.registerListener(RTD_BUTTON, &debouncer);
-  RTD().disable();
+void Rtd_Handler::processSpeedMessage(Frame& message) {
+  unsigned char hi_order = message.body[2];
+  unsigned char low_order = message.body[1];
+  uint16_t concat = (hi_order << 8) + low_order;
+  int16_t speed = (int16_t) concat;
+
+  // Scale speed from [0:32767 (aka 2^15 - 1)] to [0:30]
+  // This magic number is just 32767/30 rounded
+  int scaling_factor = 1092;
+  unsigned char scaled_speed = speed / scaling_factor;
+  LED().set_lightbar_power(scaled_speed);
+
+}
+
+void Rtd_Handler::processSocMessage(Frame& frame) {
+  unsigned char SOC = frame.body[0];
+  // Scale SOC from [0:100] to [0:30]
+  double scaling_factor = 3.33333;
+  SOC = SOC / scaling_factor;
+  LED().set_lightbar_battery(SOC);
 }
 
 void Rtd_Handler::handleMessage(Frame& frame) {
-  if(frame.id != VCU_ID) {
-    return;
-  }
-  else {
-    if(frame.body[0]) {
-      Dispatcher().enable();
-    }
-    else {
-      Dispatcher().disable();
-    }
+  switch(frame.id) {
+    case VCU_ID:
+      processVcuMessage(frame);
+      break;
+    case BMS_SOC_ID:
+      processSocMessage(frame);
+      break;
+    case POSITIVE_MOTOR_ID:
+    case NEGATIVE_MOTOR_ID:
+      processSpeedMessage(frame);
+      break;
   }
 }
-
-

@@ -1,4 +1,5 @@
 #include "Led_Controller.h"
+#include "Pins.h"
 
 unsigned char zeros[8] = {0};
 
@@ -36,9 +37,10 @@ void Led_Controller::begin() {
   begun = true;
   pinMode(0, OUTPUT);
   pinMode(1, OUTPUT);
-  pinMode(LED_SERIAL, OUTPUT);
-  pinMode(LED_CLK, OUTPUT);
-  pinMode(LED_LATCH, OUTPUT);
+  pinMode(LED_SERIAL_PIN, OUTPUT);
+  pinMode(LED_CLK_PIN, OUTPUT);
+  pinMode(LED_LATCH_PIN, OUTPUT);
+  flex();
 }
 
 void Led_Controller::flex()
@@ -50,18 +52,18 @@ void Led_Controller::flex()
 
 void Led_Controller::lightBarUpdate(unsigned char states[8])
 {
-  digitalWrite(LED_LATCH, LOW);
+  digitalWrite(LED_LATCH_PIN, LOW);
 
-  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[1]);
-  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[0]);
-  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[3]);
-  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[2]);
-  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[5]);
-  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[4]);
-  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[7]);
-  shiftOut(LED_SERIAL, LED_CLK, LSBFIRST, states[6]);
+  shiftOut(LED_SERIAL_PIN, LED_CLK_PIN, LSBFIRST, states[1]);
+  shiftOut(LED_SERIAL_PIN, LED_CLK_PIN, LSBFIRST, states[0]);
+  shiftOut(LED_SERIAL_PIN, LED_CLK_PIN, LSBFIRST, states[3]);
+  shiftOut(LED_SERIAL_PIN, LED_CLK_PIN, LSBFIRST, states[2]);
+  shiftOut(LED_SERIAL_PIN, LED_CLK_PIN, LSBFIRST, states[5]);
+  shiftOut(LED_SERIAL_PIN, LED_CLK_PIN, LSBFIRST, states[4]);
+  shiftOut(LED_SERIAL_PIN, LED_CLK_PIN, LSBFIRST, states[7]);
+  shiftOut(LED_SERIAL_PIN, LED_CLK_PIN, LSBFIRST, states[6]);
 
-  digitalWrite(LED_LATCH, HIGH);
+  digitalWrite(LED_LATCH_PIN, HIGH);
 }
 
 unsigned int getBinary(unsigned int i){

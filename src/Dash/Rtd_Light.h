@@ -5,7 +5,8 @@
 #include <SoftTimer.h>
 #include <Task.h>
 
-const int RTD_LED = 5;
+#include "Pins.h"
+
 const int RTD_PERIOD = 333;
 
 class Rtd_Light {
