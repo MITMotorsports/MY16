@@ -3,13 +3,11 @@
 // Non-member variable used in timer function pointers
 bool enableFired = false;
 
-Debouncer debouncer(RTD_BUTTON_PIN, MODE_OPEN_ON_PUSH, RTDPressed, RTDReleased);
-
 void Rtd_Handler::begin() {
-  pinMode(RTD_BUTTON_PIN, INPUT);
   LED().begin();
   RTD().begin();
-  PciManager.registerListener(RTD_BUTTON_PIN, &debouncer);
+  attachInterrupt(digitalPinToInterrupt(RTD_BUTTON_PIN), pressRtdButton, FALLING);
+  attachInterrupt(digitalPinToInterrupt(RTD_BUTTON_PIN), releaseRtdButton, RISING);
 }
 
 void sendEnableRequest() {
@@ -24,23 +22,24 @@ void sendDisableRequest() {
 
 bool sendEnableRequestWrapper(Task*) {
   sendEnableRequest();
+  enableFired = true;
   return false;
 }
 DelayRun sendEnableRequestTask(500, sendEnableRequestWrapper);
 
-void RTDPressed() {
+void pressRtdButton() {
   // The enable task will fire automatically if held for >1000ms
   enableFired = false;
   sendEnableRequestTask.startDelayed();
 }
 
-void RTDReleased(unsigned long) {
+void releaseRtdButton() {
   if(enableFired) {
     // Do nothing since car already enabled before release
     return;
   }
   else {
-    // Button released before 1000ms, so driver must want to disable
+    // Button released before 500ms, so driver must want to disable
     SoftTimer.remove(&sendEnableRequestTask);
     enableFired = false;
   }
