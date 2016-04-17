@@ -9,7 +9,7 @@ void Rtd_Handler::begin() {
 }
 
 void Rtd_Handler::handleMessage(Frame& frame) {
-  if(frame.id != VCU_ID) {
+  if(frame.id != DASH_ID) {
     return;
   }
   else {

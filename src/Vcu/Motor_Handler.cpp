@@ -15,7 +15,6 @@ const int AIR_TEMP_MODIFIER = 75; //0x4B
 const int MOTOR_POSITION_MODIFIER = 109; //0x6D
 const int MOTOR_ERRORS_MODIFIER = 143; //0x8F
 
-
 void Motor_Handler::begin() {
   // No initialization needed
 }

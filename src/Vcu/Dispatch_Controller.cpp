@@ -92,7 +92,7 @@ void Dispatch_Controller::disable() {
   SoftTimer.remove(&requestUpdatesTask);
 
   // Notify listeners of disable
-  Frame disableMessage = { .id=DASH_ID, .body={0}, .len=1};
+  Frame disableMessage = { .id=VCU_ID, .body={0}, .len=1};
   CAN().write(disableMessage);
 
   // Log disable to DAQ
@@ -113,7 +113,7 @@ void Dispatch_Controller::enable() {
   SoftTimer.add(&requestUpdatesTask);
 
   // Notify listeners of enable
-  Frame enableMessage = { .id=DASH_ID, .body={1}, .len=1};
+  Frame enableMessage = { .id=VCU_ID, .body={1}, .len=1};
   CAN().write(enableMessage);
 
   // Log enable to DAQ

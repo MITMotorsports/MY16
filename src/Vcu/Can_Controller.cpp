@@ -6,7 +6,7 @@ Can_Controller* Can_Controller::instance = NULL;
 Can_Controller::Can_Controller () 
 : begun(false)
 {
-  delegate = MCP_CAN(MCP_CS);
+  delegate = MCP_CAN(MCP_CS_PIN);
 }
 
 Can_Controller& Can_Controller::getInstance() {
@@ -30,7 +30,7 @@ void Can_Controller::begin() {
 
   // Set interrupt pin.
   // DON'T set MCP_CS: mcp_can library does it for us
-  pinMode(MCP_INT, INPUT);
+  pinMode(MCP_INT_PIN, INPUT);
 
   if (delegate.begin(CAN_500KBPS) != CAN_OK) {
     Serial.print(F("Error when enabling CAN"));

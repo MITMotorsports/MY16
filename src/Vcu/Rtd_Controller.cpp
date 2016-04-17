@@ -1,9 +1,8 @@
 #include "Rtd_Controller.h"
+#include "Pins.h"
 
 // Must define instance prior to use
 Rtd_Controller* Rtd_Controller::instance = NULL;
-
-const int MC_ENABLE_PIN = A9;
 
 // Private constructor
 Rtd_Controller::Rtd_Controller()

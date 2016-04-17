@@ -2,9 +2,7 @@
 #define CAN_CONTROLLER_H
 
 #include <mcp_can.h>
-
-const int MCP_INT = 2;
-const int MCP_CS = 53;
+#include "Pins.h"
 
 typedef struct Frame {
   unsigned int id;
@@ -21,7 +19,7 @@ class Can_Controller {
     void write(Frame frame);
   private:
     //MCP_CAN has no default constructor
-    MCP_CAN delegate = MCP_CAN(MCP_CS);
+    MCP_CAN delegate = MCP_CAN(MCP_CS_PIN);
     Can_Controller();
     static Can_Controller *instance;
     bool begun;
