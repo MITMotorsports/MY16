@@ -41,7 +41,21 @@ void releaseRtdButton() {
   else {
     // Button released before 500ms, so driver must want to disable
     SoftTimer.remove(&sendEnableRequestTask);
-    enableFired = false;
+  }
+}
+
+void Rtd_Handler::handleMessage(Frame& frame) {
+  switch(frame.id) {
+    case VCU_ID:
+      processVcuMessage(frame);
+      break;
+    case BMS_SOC_ID:
+      processSocMessage(frame);
+      break;
+    case POSITIVE_MOTOR_ID:
+    case NEGATIVE_MOTOR_ID:
+      processSpeedMessage(frame);
+      break;
   }
 }
 
@@ -74,19 +88,4 @@ void Rtd_Handler::processSocMessage(Frame& frame) {
   double scaling_factor = 3.33333;
   SOC = SOC / scaling_factor;
   LED().set_lightbar_battery(SOC);
-}
-
-void Rtd_Handler::handleMessage(Frame& frame) {
-  switch(frame.id) {
-    case VCU_ID:
-      processVcuMessage(frame);
-      break;
-    case BMS_SOC_ID:
-      processSocMessage(frame);
-      break;
-    case POSITIVE_MOTOR_ID:
-    case NEGATIVE_MOTOR_ID:
-      processSpeedMessage(frame);
-      break;
-  }
 }

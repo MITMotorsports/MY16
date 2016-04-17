@@ -1,22 +1,8 @@
 #include "Buzzer.h"
 #include "Pins.h"
 
-Buzzer::Buzzer(bool _enabled) 
-: enabled(_enabled)
-{
-  // No initialization necessary
-}
-
 void Buzzer::begin() {
   pinMode(BUZZER_PIN, OUTPUT);
-}
-
-void Buzzer::enable() {
-  enabled = true;
-}
-
-void Buzzer::disable() {
-  enabled = false;
 }
 
 bool buzzerOff(Task*) {

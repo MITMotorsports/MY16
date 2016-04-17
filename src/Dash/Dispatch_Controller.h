@@ -16,7 +16,6 @@ class Dispatch_Controller {
     static Dispatch_Controller *instance;
     Rtd_Handler rtd_handler;
     bool begun;
-    bool enabled;
 };
 
 Dispatch_Controller& Dispatcher();

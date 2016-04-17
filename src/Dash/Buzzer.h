@@ -3,16 +3,17 @@
 
 #include <DelayRun.h>
 
+const bool BUZZER_ENABLED = false;
+
 class Buzzer {
   public:
-    Buzzer(bool _enabled);
     void begin();
     void enable();
     void disable();
     void trigger(int ms);
 
   private:
-    bool enabled;
+    bool enabled = BUZZER_ENABLED;
 };
 
 #endif // BUZZER_H

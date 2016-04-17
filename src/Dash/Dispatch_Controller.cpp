@@ -14,7 +14,6 @@
 Dispatch_Controller::Dispatch_Controller()
 : rtd_handler(Rtd_Handler()),
   begun(false),
-  enabled(false)
 {
 
 }

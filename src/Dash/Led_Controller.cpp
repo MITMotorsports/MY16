@@ -35,8 +35,6 @@ void Led_Controller::begin() {
     return;
   }
   begun = true;
-  pinMode(0, OUTPUT);
-  pinMode(1, OUTPUT);
   pinMode(LED_SERIAL_PIN, OUTPUT);
   pinMode(LED_CLK_PIN, OUTPUT);
   pinMode(LED_LATCH_PIN, OUTPUT);
