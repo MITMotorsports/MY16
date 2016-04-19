@@ -1,9 +1,13 @@
 #include "Rtd_Handler.h"
 
 // Non-member variable used in timer function pointers
-volatile bool enableFired = false;
+bool enableFired = false;
 
 Debouncer debouncer(RTD_BUTTON_PIN, MODE_CLOSE_ON_PUSH, pressRtdButton, releaseRtdButton);
+
+uint8_t bit_idx = 0;
+
+uint8_t lightbar_state[8] = {0,0,0,0,0,0,0,0};
 
 void Rtd_Handler::begin() {
   pinMode(RTD_BUTTON_PIN, INPUT);
@@ -13,13 +17,11 @@ void Rtd_Handler::begin() {
 void sendEnableRequest() {
   Frame enableMessage = { .id=DASH_ID, .body={1}};
   CAN().write(enableMessage);
-  Serial.println("Enable request sent");
 }
 
 void sendDisableRequest() {
   Frame disableMessage = { .id=DASH_ID, .body={0}};
   CAN().write(disableMessage);
-  Serial.println("Disable request sent");
 }
 
 bool sendEnableRequestWrapper(Task*) {
@@ -30,15 +32,47 @@ bool sendEnableRequestWrapper(Task*) {
 
 DelayRun sendEnableRequestTask(500, sendEnableRequestWrapper);
 
+uint8_t getOnes(uint8_t numOnes) {
+  switch(numOnes) {
+    case 0:
+      return 0x01;
+    case 1:
+      return 0x03;
+    case 2:
+      return 0x07;
+    case 3:
+      return 0x0F;
+    case 4:
+      return 0x1F;
+    case 5:
+      return 0x3F;
+    case 6:
+      return 0x7F;
+    case 7:
+    default:
+      return 0xFF;
+  }
+}
+
+void incrementLightbar() {
+  lightbar_state[bit_idx / 8] = getOnes(bit_idx % 8);
+  bit_idx++;
+}
+
 void pressRtdButton() {
-  Serial.println("RTD Button Pressed");
   // The enable task will fire automatically if held for >1000ms
   enableFired = false;
   sendEnableRequestTask.startDelayed();
+
+  Serial.print("Displaying ");
+  Serial.print(bit_idx);
+  Serial.println(" LEDs");
+
+  LED().lightBarUpdate(lightbar_state);
+  incrementLightbar();
 }
 
 void releaseRtdButton(unsigned long) {
-  Serial.println("RTD Button Released");
   if(enableFired) {
     // Do nothing since car already enabled before release
     return;
@@ -67,12 +101,10 @@ void Rtd_Handler::handleMessage(Frame& frame) {
 
 void Rtd_Handler::processVcuMessage(Frame& message) {
   if(message.body[0]) {
-    Serial.println("Enable command received");
     RTD().enable();
   }
   else {
     RTD().disable();
-    Serial.println("Disable command received");
   }
 }
 
@@ -86,8 +118,8 @@ void Rtd_Handler::processSpeedMessage(Frame& message) {
   // This magic number is just 32767/30 rounded
   int scaling_factor = 1092;
   unsigned char scaled_speed = speed / scaling_factor;
-  Serial.println("Speed message received");
-  LED().set_lightbar_power(scaled_speed);
+  // LED().set_lightbar_power(scaled_speed);
+  (void)scaled_speed;
 
 }
 
@@ -96,5 +128,5 @@ void Rtd_Handler::processSocMessage(Frame& frame) {
   // Scale SOC from [0:100] to [0:30]
   double scaling_factor = 3.33333;
   SOC = SOC / scaling_factor;
-  LED().set_lightbar_battery(SOC);
+  // LED().set_lightbar_battery(SOC);
 }
