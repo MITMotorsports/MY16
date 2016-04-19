@@ -13,9 +13,9 @@ class Led_Controller {
     void set_lightbar_power(unsigned char power);
     void set_lightbar_battery(unsigned char power);
     void set_lightbar_overheat(bool value);
+    void lightBarUpdate(unsigned char states[8]);
   private:
     Led_Controller();
-    void lightBarUpdate(unsigned char states[8]);
     void flexForwards();
     void flexBackwards();
     static Led_Controller *instance;
