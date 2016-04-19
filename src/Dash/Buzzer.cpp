@@ -6,6 +6,7 @@ void Buzzer::begin() {
 }
 
 bool buzzerOff(Task*) {
+  Serial.println("Buzzer turned off");
   digitalWrite(BUZZER_PIN, LOW);
   // False means don't execute follow-up task
   return false;
@@ -19,6 +20,7 @@ void Buzzer::trigger(int ms) {
     return;
   }
 
+  Serial.println("Buzzer turned on");
   digitalWrite(BUZZER_PIN, HIGH);
   buzzerOffTask.setPeriodMs(ms);
   buzzerOffTask.startDelayed();

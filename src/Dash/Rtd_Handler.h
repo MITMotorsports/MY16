@@ -26,6 +26,6 @@ void sendEnableRequest();
 void sendDisableRequest();
 bool sendEnableRequestWrapper(Task*);
 void pressRtdButton();
-void releaseRtdButton();
+void releaseRtdButton(unsigned long);
 
 #endif // RTD_HANDLER_H

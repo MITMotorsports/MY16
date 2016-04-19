@@ -8,7 +8,7 @@ const int MC_ENABLE_PORT = 7;
 // Private constructor
 Rtd_Controller::Rtd_Controller()
 : enabled(false),
-  buzzer(true),
+  buzzer(),
   light(),
   begun(false)
 {
@@ -49,8 +49,4 @@ void Rtd_Controller::disable() {
 
 bool Rtd_Controller::isEnabled() {
   return enabled;
-}
-
-void Rtd_Controller::muteBuzzer() {
-  buzzer.disable();
 }

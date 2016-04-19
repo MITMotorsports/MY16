@@ -20,6 +20,6 @@ const int LED_CLK_PIN = PD6;
 const int BUZZER_PIN = PD7;
 
 // PB0 - digital pin 8 but NOT PB0 because that maps to 0
-const int LED_SERIAL_PIN = 8;
+const int LED_SERIAL_PIN = 9;
 
 #endif // PINS_H

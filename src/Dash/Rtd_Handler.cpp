@@ -1,23 +1,25 @@
 #include "Rtd_Handler.h"
 
 // Non-member variable used in timer function pointers
-bool enableFired = false;
+volatile bool enableFired = false;
+
+Debouncer debouncer(RTD_BUTTON_PIN, MODE_CLOSE_ON_PUSH, pressRtdButton, releaseRtdButton);
 
 void Rtd_Handler::begin() {
-  LED().begin();
-  RTD().begin();
-  attachInterrupt(digitalPinToInterrupt(RTD_BUTTON_PIN), pressRtdButton, FALLING);
-  attachInterrupt(digitalPinToInterrupt(RTD_BUTTON_PIN), releaseRtdButton, RISING);
+  pinMode(RTD_BUTTON_PIN, INPUT);
+  PciManager.registerListener(RTD_BUTTON_PIN, &debouncer);
 }
 
 void sendEnableRequest() {
   Frame enableMessage = { .id=DASH_ID, .body={1}};
   CAN().write(enableMessage);
+  Serial.println("Enable request sent");
 }
 
 void sendDisableRequest() {
   Frame disableMessage = { .id=DASH_ID, .body={0}};
   CAN().write(disableMessage);
+  Serial.println("Disable request sent");
 }
 
 bool sendEnableRequestWrapper(Task*) {
@@ -25,15 +27,18 @@ bool sendEnableRequestWrapper(Task*) {
   enableFired = true;
   return false;
 }
+
 DelayRun sendEnableRequestTask(500, sendEnableRequestWrapper);
 
 void pressRtdButton() {
+  Serial.println("RTD Button Pressed");
   // The enable task will fire automatically if held for >1000ms
   enableFired = false;
   sendEnableRequestTask.startDelayed();
 }
 
-void releaseRtdButton() {
+void releaseRtdButton(unsigned long) {
+  Serial.println("RTD Button Released");
   if(enableFired) {
     // Do nothing since car already enabled before release
     return;
@@ -41,6 +46,7 @@ void releaseRtdButton() {
   else {
     // Button released before 500ms, so driver must want to disable
     SoftTimer.remove(&sendEnableRequestTask);
+    sendDisableRequest();
   }
 }
 
@@ -61,10 +67,12 @@ void Rtd_Handler::handleMessage(Frame& frame) {
 
 void Rtd_Handler::processVcuMessage(Frame& message) {
   if(message.body[0]) {
+    Serial.println("Enable command received");
     RTD().enable();
   }
   else {
     RTD().disable();
+    Serial.println("Disable command received");
   }
 }
 
@@ -78,6 +86,7 @@ void Rtd_Handler::processSpeedMessage(Frame& message) {
   // This magic number is just 32767/30 rounded
   int scaling_factor = 1092;
   unsigned char scaled_speed = speed / scaling_factor;
+  Serial.println("Speed message received");
   LED().set_lightbar_power(scaled_speed);
 
 }

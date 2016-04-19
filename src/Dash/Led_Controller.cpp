@@ -38,11 +38,11 @@ void Led_Controller::begin() {
   pinMode(LED_SERIAL_PIN, OUTPUT);
   pinMode(LED_CLK_PIN, OUTPUT);
   pinMode(LED_LATCH_PIN, OUTPUT);
-  flex();
 }
 
 void Led_Controller::flex()
 {
+  Serial.println("Flexin mah muscles");
   flexForwards();
   flexBackwards();
   flexForwards();
@@ -66,6 +66,24 @@ void Led_Controller::lightBarUpdate(unsigned char states[8])
 
 unsigned int getBinary(unsigned int i){
   return 1 << (7 - (i%8));
+}
+
+void Led_Controller::set_lightbar_overheat(bool value) {
+  if(value == overheat) {
+    return;
+  }
+  overheat = value;
+  if(overheat) {
+    // Make it hot
+    lightbar_state[3] = (lightbar_state[3] | 0b00000011);
+    lightbar_state[4] = (lightbar_state[4] | 0b11000000);
+  }
+  else {
+    // Make it not
+    lightbar_state[3] = (lightbar_state[3] & 0b11111100);
+    lightbar_state[4] = (lightbar_state[4] & 0b00111111);
+  }
+  lightBarUpdate(lightbar_state);
 }
 
 void Led_Controller::set_lightbar_power(unsigned char value) {

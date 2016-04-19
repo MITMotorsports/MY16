@@ -12,7 +12,6 @@ class Rtd_Controller {
     void disable();
     void enable();
     bool isEnabled();
-    void muteBuzzer();
   private:
     //Private constructors
     Rtd_Controller();
