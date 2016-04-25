@@ -7,6 +7,8 @@
 const int REQUEST_PREFIX = 61; //0x3D
 const int TORQUE_PREFIX = 144; //0x90
 
+const float MOTOR_RPM_SCALING_FACTOR = 8.2;
+
 const int MOTOR_CURRENT_MODIFIER = 32; //0x20
 const int MOTOR_SPEED_MODIFIER = 48; //0x30
 const int MOTOR_TEMP_MODIFIER = 73; //0x49
@@ -19,41 +21,44 @@ void Motor_Handler::begin() {
   // No initialization needed
 }
 
-void Motor_Handler::requestAllUpdates() {
-  requestSingleUpdate(MOTOR_CURRENT_MODIFIER);
-  requestSingleUpdate(MOTOR_SPEED_MODIFIER);
-  requestSingleUpdate(MOTOR_TEMP_MODIFIER);
-  requestSingleUpdate(MOTOR_POSITION_MODIFIER);
-  requestSingleUpdate(MOTOR_ERRORS_MODIFIER);
+void Motor_Handler::requestPermanentUpdates(uint16_t can_id) {
+  requestPermanentUpdate(can_id, MOTOR_CURRENT_MODIFIER, 101);
+  requestPermanentUpdate(can_id, MOTOR_SPEED_MODIFIER, 103);
+  requestPermanentUpdate(can_id, MOTOR_TEMP_MODIFIER, 105);
+  requestPermanentUpdate(can_id, MOTOR_POSITION_MODIFIER, 107);
+  requestPermanentUpdate(can_id, MOTOR_ERRORS_MODIFIER, 109);
 }
 
-void Motor_Handler::requestSingleUpdate(unsigned char id) {
-  Frame positiveFrame = {.id=POSITIVE_MOTOR_REQUEST_ID, .body={REQUEST_PREFIX, id, 0}, .len=3};
-  Frame negativeFrame = {.id=NEGATIVE_MOTOR_REQUEST_ID, .body={REQUEST_PREFIX, id, 0}, .len=3};
-  CAN().write(positiveFrame);
-  CAN().write(negativeFrame);
+void Motor_Handler::requestPermanentUpdate(uint16_t can_id, uint8_t msg_type, uint8_t time) {
+  Frame frame = {.id=can_id, .body={REQUEST_PREFIX, msg_type, time}, .len=3};
+  CAN().write(frame);
+}
+
+int16_t mergeBytesOfSignedInt(uint8_t low_byte, uint8_t high_byte) {
+  int16_t result = (high_byte << 8) + low_byte;
+  return result;
 }
 
 void Motor_Handler::handleMessage(Frame& message) {
   // Enable-only task
-  if(!RTD().isEnabled()) {
+  if(!(message.id == RIGHT_MOTOR_ID || message.id == LEFT_MOTOR_ID)) {
     return;
   }
 
-  int sign;
-  if(message.id == POSITIVE_MOTOR_ID) {
-    sign = 1;
-  }
-  else if(message.id == NEGATIVE_MOTOR_ID) {
-    // TODO make negative if necessary
-    sign = 1;
-  }
-  else {
-    return;
-  }
+  Serial.print("motor_id: ");
+  Serial.print(message.id);
+  Serial.print(", msg_id: ");
+  Serial.print(message.body[0]);
   switch(message.body[0]) {
     case MOTOR_SPEED_MODIFIER:
       // TODO eventually log this
+      Serial.print(", speed_raw: ");
+      int signed_speed = mergeBytesOfSignedInt(message.body[1], message.body[2]);
+      Serial.print(signed_speed);
+      int converted_speed = signed_speed / MOTOR_RPM_SCALING_FACTOR;
+      Serial.print(", speed_rpm: ");
+      Serial.print(converted_speed);
       break;
   }
+  Serial.println("");
 }

@@ -9,6 +9,7 @@ class Rtd_Controller {
     void begin();
     void disable();
     void enable();
+    void shutdown(String reason);
     bool isEnabled();
   private:
     //Private constructors
@@ -16,6 +17,7 @@ class Rtd_Controller {
     static Rtd_Controller *instance;
     bool enabled;
     bool begun;
+    void setEnablePins(uint8_t dir);
 };
 
 // Singleton accessor declaration

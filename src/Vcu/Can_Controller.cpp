@@ -43,7 +43,11 @@ bool Can_Controller::msgAvailable() {
 
 Frame Can_Controller::read() {
   Frame frame;
-  delegate.readMsgBuf(&frame.len, frame.body);
+  uint8_t response = delegate.readMsgBuf(&frame.len, frame.body);
+  if (response != CAN_OK) {
+    Serial.print("PROBLEM: ");
+    Serial.println(canResponseToString(response));
+  }
   frame.id = delegate.getCanId();
   return frame;
 }

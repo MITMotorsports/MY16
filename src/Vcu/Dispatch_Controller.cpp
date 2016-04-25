@@ -27,11 +27,6 @@ void dispatchPointer(Task*) {
 }
 Task stepTask(0, dispatchPointer);
 
-void requestUpdatesPointer(Task*) {
-  Dispatcher().requestUpdates();
-}
-Task requestUpdatesTask(500, requestUpdatesPointer);
-
 void Dispatch_Controller::begin() {
   //Make idempotent
   if(begun) {
@@ -54,6 +49,10 @@ void Dispatch_Controller::begin() {
 
   // Start event loop
   SoftTimer.add(&stepTask);
+  // Start MC requests
+  // TODO decide whether we want this always or only when RTD
+  motor_handler.requestPermanentUpdates(LEFT_MOTOR_ID);
+  motor_handler.requestPermanentUpdates(RIGHT_MOTOR_ID);
 
   //Log to DAQ
   Serial.println("");
@@ -89,7 +88,6 @@ void Dispatch_Controller::disable() {
 
   // Actually disable
   RTD().disable();
-  SoftTimer.remove(&requestUpdatesTask);
 
   // Notify listeners of disable
   Frame disableMessage = { .id=VCU_ID, .body={0}, .len=1};
@@ -110,7 +108,6 @@ void Dispatch_Controller::enable() {
 
   // Actually enable
   RTD().enable();
-  SoftTimer.add(&requestUpdatesTask);
 
   // Notify listeners of enable
   Frame enableMessage = { .id=VCU_ID, .body={1}, .len=1};
@@ -124,16 +121,13 @@ void Dispatch_Controller::enable() {
 
 void Dispatch_Controller::dispatch() {
   // If no message, break early
-  if(!CAN().msgAvailable()) { return; }
-  Frame frame = CAN().read();
+  while(CAN().msgAvailable()) {
+    Frame frame = CAN().read();
 
-  // Send message to each handler
-  rtd_handler.handleMessage(frame);
-  bms_handler.handleMessage(frame);
-  can_node_handler.handleMessage(frame);
-  motor_handler.handleMessage(frame);
-}
-
-void Dispatch_Controller::requestUpdates() {
-  motor_handler.requestAllUpdates();
+    // Send message to each handler
+    rtd_handler.handleMessage(frame);
+    bms_handler.handleMessage(frame);
+    can_node_handler.handleMessage(frame);
+    motor_handler.handleMessage(frame);
+  }
 }

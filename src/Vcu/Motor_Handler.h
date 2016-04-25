@@ -7,10 +7,9 @@ class Motor_Handler : public Handler {
   public:
     void begin();
     void handleMessage(Frame& message);
-    void requestAllUpdates();
+    void requestPermanentUpdates(uint16_t can_id);
   private:
-    void processSpeedMessage(Frame& message, int sign);
-    void requestSingleUpdate(unsigned char id);
+    void requestPermanentUpdate(uint16_t can_id, uint8_t msg_type, uint8_t time);
 };
 #endif // MOTOR_HANDLER_H
 

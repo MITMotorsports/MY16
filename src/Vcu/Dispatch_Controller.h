@@ -13,7 +13,6 @@ class Dispatch_Controller {
     void disable();
     void enable();
     void dispatch();
-    void requestUpdates();
     bool isEnabled();
   private:
     Dispatch_Controller();

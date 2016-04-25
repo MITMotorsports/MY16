@@ -32,25 +32,34 @@ uint16_t Bms_Handler::mergeBytes(unsigned char low, unsigned char high) {
 }
 
 void Bms_Handler::logPackMessage(String prefix, int32_t reading, String units) {
-  Serial.print("bms_");
-  Serial.print(prefix);
-  Serial.print(", ");
-  Serial.print(reading);
-  Serial.print(", ");
-  Serial.print(units);
-  Serial.println("");
+  // TODO put these back when we want to log
+  (void)prefix;
+  (void)reading;
+  (void)units;
+  // Serial.print("bms_");
+  // Serial.print(prefix);
+  // Serial.print(", ");
+  // Serial.print(reading);
+  // Serial.print(", ");
+  // Serial.print(units);
+  // Serial.println("");
 }
 
 void Bms_Handler::logCellMessage(String prefix, unsigned char cell, int32_t reading, String units) {
-  Serial.print("bms_cell_");
-  Serial.print(prefix);
-  Serial.print(", cell_");
-  Serial.print(cell);
-  Serial.print(", ");
-  Serial.print(reading);
-  Serial.print(", ");
-  Serial.print(units);
-  Serial.println("");
+  // TODO put these back when we want to log
+  (void)prefix;
+  (void)reading;
+  (void)units;
+  (void)cell;
+  // Serial.print("bms_cell_");
+  // Serial.print(prefix);
+  // Serial.print(", cell_");
+  // Serial.print(cell);
+  // Serial.print(", ");
+  // Serial.print(reading);
+  // Serial.print(", ");
+  // Serial.print(units);
+  // Serial.println("");
 }
 
 void Bms_Handler::handleVoltageMessage(Frame& message) {

@@ -17,8 +17,12 @@ void Rtd_Controller::begin() {
     return;
   }
   begun = true;
+  pinMode(SHUTDOWN_CIRCUIT_PIN, OUTPUT);
+  digitalWrite(SHUTDOWN_CIRCUIT_PIN, HIGH);
+
   pinMode(MC_ENABLE_PIN, OUTPUT);
-  digitalWrite(MC_ENABLE_PIN, LOW);
+  pinMode(MC_ENABLE_BOOSTER_PIN, OUTPUT);
+  setEnablePins(LOW);
 }
 
 Rtd_Controller& Rtd_Controller::getInstance() {
@@ -35,12 +39,32 @@ Rtd_Controller& RTD() {
 
 void Rtd_Controller::enable() {
   enabled = true;
-  digitalWrite(MC_ENABLE_PIN, HIGH);
+  setEnablePins(HIGH);
 }
 
 void Rtd_Controller::disable() {
   enabled = false;
-  digitalWrite(MC_ENABLE_PIN, LOW);
+  setEnablePins(LOW);
+}
+
+void Rtd_Controller::setEnablePins(uint8_t direction) {
+  if (direction == LOW) {
+    // Set pin 0 and pin 4 to low, all others stay the same
+    PORTK = PORTK & 0b11101110;
+  }
+  else if (direction == HIGH) {
+    // Set pin 0 and pin 4 to high, all others stay the same
+    PORTK = PORTK | 0b00010001;
+  }
+}
+
+void Rtd_Controller::shutdown(String reason = "") {
+  disable();
+  Serial.println("");
+  Serial.print("CAR_SHUTDOWN: ");
+  Serial.println(reason);
+  Serial.println("");
+  digitalWrite(SHUTDOWN_CIRCUIT_PIN, LOW);
 }
 
 bool Rtd_Controller::isEnabled() {

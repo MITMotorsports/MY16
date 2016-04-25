@@ -40,10 +40,8 @@ void Can_Node_Handler::handleMessage(Frame& message) {
     return;
   }
 
-  if(!plausibilityCheck(message)) {
+  if(!isPlausible(message.body[STARBOARD_THROTTLE], message.body[PORT_THROTTLE])) {
     writeThrottleMessages(0);
-    brakeLightOff();
-    Dispatcher().disable();
     return;
   }
 
@@ -54,16 +52,6 @@ void Can_Node_Handler::handleMessage(Frame& message) {
   const uint8_t throttle = min(message.body[STARBOARD_THROTTLE], message.body[PORT_THROTTLE]);
   Store().logThrottle(throttle);
 
-  // TODO re-enable when brake turned on
-  // const uint8_t brake = max(message.body[STARBOARD_BRAKE], message.body[PORT_BRAKE]);
-  // Store().logBrake(brake);
-  //
-  // if(brake < 50) {
-  //   brakeLightOff();
-  // } else {
-  //   brakeLightOn();
-  // }
-
   // Change from [0:255] to [0:32767]
   const int16_t throttleExtended = throttle << 7;
 
@@ -71,12 +59,21 @@ void Can_Node_Handler::handleMessage(Frame& message) {
   const float throttleScaled = ((float)throttleExtended) * THROTTLE_SCALING_FACTOR;
   const int16_t throttleRounded = (int16_t) (round(throttleScaled));
   writeThrottleMessages(throttleRounded);
-}
 
-bool Can_Node_Handler::plausibilityCheck(Frame f) {
-  bool throttle = isPlausible(f.body[STARBOARD_THROTTLE], f.body[PORT_THROTTLE]);
-  bool brake = isPlausible(f.body[STARBOARD_BRAKE], f.body[PORT_BRAKE]);
-  return throttle && brake;
+  if(!isPlausible(message.body[STARBOARD_BRAKE], message.body[PORT_BRAKE])) {
+    // TODO uncomment this line when stuff actually working
+    // writeThrottleMessages(0);
+    return;
+  }
+
+  const uint8_t brake = max(message.body[STARBOARD_BRAKE], message.body[PORT_BRAKE]);
+  Store().logBrake(brake);
+
+  if(brake < 50) {
+    brakeLightOff();
+  } else {
+    brakeLightOn();
+  }
 }
 
 bool Can_Node_Handler::isPlausible(uint8_t x, uint8_t y) {
@@ -90,7 +87,7 @@ bool Can_Node_Handler::isPlausible(uint8_t x, uint8_t y) {
 
 void Can_Node_Handler::writeThrottleMessages(const int16_t throttle) {
   Frame frame = {
-    .id=POSITIVE_MOTOR_REQUEST_ID,
+    .id=RIGHT_MOTOR_REQUEST_ID,
     .body={
       TORQUE_PREFIX,
       lowByte(throttle),
@@ -99,6 +96,6 @@ void Can_Node_Handler::writeThrottleMessages(const int16_t throttle) {
     .len=3
   };
   CAN().write(frame);
-  frame.id = NEGATIVE_MOTOR_REQUEST_ID;
+  frame.id = LEFT_MOTOR_REQUEST_ID;
   CAN().write(frame);
 }

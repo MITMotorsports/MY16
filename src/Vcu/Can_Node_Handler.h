@@ -17,7 +17,6 @@ class Can_Node_Handler : public Handler {
     void driveMotors(uint8_t throttle);
     void writeThrottleMessages(const int16_t throttle);
 
-    bool plausibilityCheck(Frame f);
     bool isPlausible(uint8_t max, uint8_t min);
 };
 
