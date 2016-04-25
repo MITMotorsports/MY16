@@ -6,27 +6,22 @@
 #include "Pins.h"
 
 const unsigned char ANALOG_MESSAGE_ID = 0x01;
-const unsigned char RPM_MESSAGE_ID = 0x10;
-
-const float STARBOARD_THROTTLE_SCALE = 0.3643;
+const int ANALOG_MESSAGE_PERIOD = 100;
+const float STARBOARD_THROTTLE_SCALE = 0.4061;
 const float PORT_THROTTLE_SCALE = STARBOARD_THROTTLE_SCALE;
-const int STARBOARD_THROTTLE_OFFSET = 0;
-const int PORT_THROTTLE_OFFSET = -5;
+const int STARBOARD_THROTTLE_OFFSET = -97;
+const int PORT_THROTTLE_OFFSET = -97;
 
+const unsigned char RPM_MESSAGE_ID = 0x10;
 const int RPM_MESSAGE_PERIOD = 100;
 const int RPM_READING_PERIOD = 10;
 const unsigned int MOVING_AVG_WIDTH = RPM_MESSAGE_PERIOD / RPM_READING_PERIOD;
-
-const int ANALOG_MESSAGE_PERIOD = 100;
-
 const int CLICKS_PER_REVOLUTION = 22;
 const float REVOLUTIONS_PER_CLICK = 1.0 / CLICKS_PER_REVOLUTION;
 const unsigned long MICROS_PER_MIN = 60000000;
-
 unsigned int portRpms[MOVING_AVG_WIDTH];
 unsigned int starboardRpms[MOVING_AVG_WIDTH];
 unsigned int rpmIndex = 0;
-
 unsigned long lastRpmTime = 0;
 volatile unsigned int starboardClicks = 0;
 volatile unsigned int portClicks = 0;
@@ -49,7 +44,6 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(PORT_ENCODER_PIN), logStarboardEncoderClick, RISING);
 
   SoftTimer.add(&recordRpmTask);
-  SoftTimer.add(&sendAnalogCanMessageTask);
   SoftTimer.add(&sendAnalogCanMessageTask);
 
   resetClicksAndTimer(micros());
@@ -90,6 +84,7 @@ void sendAnalogCanMessage(Task*) {
     PORT_THROTTLE_SCALE,
     PORT_THROTTLE_OFFSET
   );
+
   Frame message = {.id=1, .body={starboard_scaled, port_scaled}, .len=2};
   CAN().write(message);
 }
@@ -160,5 +155,6 @@ void sendRpmCanMessage(Task*) {
     },
     .len=4
   };
-  CAN().write(rpmMessage);
+  // CAN().write(rpmMessage);
+  (void)rpmMessage;
 }
