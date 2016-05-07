@@ -4,8 +4,11 @@ Store_Controller* Store_Controller::instance = NULL;
 
 Store_Controller::Store_Controller() 
   : speeds{SENTINAL, SENTINAL, SENTINAL, SENTINAL}
-  , throttle(SENTINAL)
-  , brake(SENTINAL)
+  , responses{false, false}
+  , analogThrottle(0)
+  , analogBrake(0)
+  , outputTorque(0)
+  , brakeThrottleConflict(false)
   , bmsTemp(SENTINAL)
   , bmsCurrent(SENTINAL)
   , bmsVoltage(SENTINAL)
@@ -32,18 +35,40 @@ int16_t Store_Controller::readSpeed(const Wheel wheel) {
   return speeds[wheel];
 }
 
-void Store_Controller::logThrottle(const int16_t _throttle) {
-  throttle = _throttle;
+void Store_Controller::logAnalogThrottle(const uint8_t throttle) {
+  analogThrottle = throttle;
 }
-int16_t Store_Controller::readThrottle() {
-  return throttle;
+uint8_t Store_Controller::readAnalogThrottle() {
+  return analogThrottle;
 }
 
-void Store_Controller::logBrake(const int16_t _brake) {
-  brake = _brake;
+void Store_Controller::logAnalogBrake(const uint8_t brake) {
+  analogBrake = brake;
 }
-int16_t Store_Controller::readBrake() {
-  return brake;
+uint8_t Store_Controller::readAnalogBrake() {
+  return analogBrake;
+}
+
+void Store_Controller::logOutputTorque(const int16_t torque) {
+  outputTorque = torque;
+}
+int16_t Store_Controller::readOutputTorque() {
+  return outputTorque;
+}
+
+void Store_Controller::logBrakeThrottleConflict(const bool conflict) {
+  brakeThrottleConflict = conflict;
+}
+bool Store_Controller::readBrakeThrottleConflict() {
+  return brakeThrottleConflict;
+}
+
+void Store_Controller::logMotorResponse(MotorController dir) {
+  responses[dir] = true;
+}
+
+bool Store_Controller::readMotorResponse(MotorController dir) {
+  return responses[dir];
 }
 
 void Store_Controller::logBmsTemp(const int16_t _bmsTemp) {

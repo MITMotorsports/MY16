@@ -11,7 +11,7 @@ const int PORT_BRAKE = 3;
 
 const float THROTTLE_SCALING_FACTOR = 0.2;
 
-const uint8_t REGEN_CUTOFF = 12;
+const uint8_t BRAKE_PUSHED_CUTOFF = 50;
 
 const uint8_t TORQUE_PREFIX = 144; //0x90
 
@@ -40,40 +40,67 @@ void Can_Node_Handler::handleMessage(Frame& message) {
     return;
   }
 
-  if(!isPlausible(message.body[STARBOARD_THROTTLE], message.body[PORT_THROTTLE])) {
-    writeThrottleMessages(0);
-    return;
+  uint8_t analogThrottle;
+  uint8_t analogBrake;
+  bool plausible = true;
+
+  if (isPlausible(message.body[STARBOARD_THROTTLE], message.body[PORT_THROTTLE])) {
+    analogThrottle = min(
+      message.body[STARBOARD_THROTTLE],
+      message.body[PORT_THROTTLE]
+    );
+  }
+  else {
+    analogThrottle = 0;
+    plausible = false;
   }
 
-  // After philosophical discussion with kchan, it was determined that false
-  // positives are preferable to false negatives for braking, but false
-  // negatives are preferable to false positives for throttle.
-  // Thus, we use max of brake sensors and min of throttle sensors.
-  const uint8_t throttle = min(message.body[STARBOARD_THROTTLE], message.body[PORT_THROTTLE]);
-  Store().logThrottle(throttle);
-
-  // Change from [0:255] to [0:32767]
-  const int16_t throttleExtended = throttle << 7;
-
-  // Some slight shenanagins with casting here but whatever should be fine
-  const float throttleScaled = ((float)throttleExtended) * THROTTLE_SCALING_FACTOR;
-  const int16_t throttleRounded = (int16_t) (round(throttleScaled));
-  writeThrottleMessages(throttleRounded);
-
-  if(!isPlausible(message.body[STARBOARD_BRAKE], message.body[PORT_BRAKE])) {
-    // TODO uncomment this line when stuff actually working
-    // writeThrottleMessages(0);
-    return;
+  if (isPlausible(message.body[STARBOARD_BRAKE], message.body[PORT_BRAKE])) {
+    analogBrake = max(
+      message.body[STARBOARD_BRAKE],
+      message.body[PORT_BRAKE]
+    );
+  }
+  else {
+    analogBrake = 0;
+    plausible = false;
   }
 
-  const uint8_t brake = max(message.body[STARBOARD_BRAKE], message.body[PORT_BRAKE]);
-  Store().logBrake(brake);
-
-  if(brake < 50) {
+  // Brake light should operate regardless of plausibility
+  if(analogBrake < BRAKE_PUSHED_CUTOFF) {
     brakeLightOff();
   } else {
     brakeLightOn();
   }
+
+  // So should logging
+  Store().logAnalogThrottle(analogThrottle);
+  Store().logAnalogBrake(analogBrake);
+
+  // But not torque
+  if (!plausible) {
+    Store().logOutputTorque(0);
+    writeThrottleMessages(0);
+    return;
+  }
+
+  // Also zero torque if brake-throttle conflict
+  if (brakeThrottleConflict(analogThrottle, analogBrake)) {
+    Store().logOutputTorque(0);
+    writeThrottleMessages(0);
+    return;
+  }
+
+  // Change from [0:255] to [0:32767]
+  const int16_t throttleExtended = analogThrottle << 7;
+
+  // Apply scaling factor and round
+  const float throttleScaled = ((float)throttleExtended) * THROTTLE_SCALING_FACTOR;
+  const int16_t outputTorque = (int16_t) (round(throttleScaled));
+
+  // Log and write torque commands
+  Store().logOutputTorque(outputTorque);
+  writeThrottleMessages(outputTorque);
 }
 
 bool Can_Node_Handler::isPlausible(uint8_t x, uint8_t y) {
@@ -85,9 +112,37 @@ bool Can_Node_Handler::isPlausible(uint8_t x, uint8_t y) {
   return plausible;
 }
 
+bool Can_Node_Handler::brakeThrottleConflict(uint8_t analogThrottle, uint8_t analogBrake) {
+  bool result = false;
+  if (Store().readBrakeThrottleConflict()) {
+    // We recently triggered a conflict: stay in conflict mode
+    // unless throttle below 5%
+    if (analogThrottle < (255 * 0.05)) {
+      // Remove conflict
+      Store().logBrakeThrottleConflict(false);
+    }
+    else {
+      // Don't remove conflict
+      result = true;
+    }
+  }
+  else {
+    // We are not in conflict mode: only trigger conflict if
+    // throttle above 25% and brake pressed
+    if (analogThrottle >= (255 * 0.25)) {
+      if (analogBrake >= BRAKE_PUSHED_CUTOFF) {
+        Store().logBrakeThrottleConflict(true);
+        result = true;
+      }
+    }
+  }
+  return result;
+}
+
+// Right motor spins backwards
 void Can_Node_Handler::writeThrottleMessages(const int16_t throttle) {
-  Frame frame = {
-    .id=RIGHT_MOTOR_REQUEST_ID,
+  Frame leftFrame = {
+    .id=LEFT_MOTOR_REQUEST_ID,
     .body={
       TORQUE_PREFIX,
       lowByte(throttle),
@@ -95,7 +150,17 @@ void Can_Node_Handler::writeThrottleMessages(const int16_t throttle) {
     },
     .len=3
   };
-  CAN().write(frame);
-  frame.id = LEFT_MOTOR_REQUEST_ID;
-  CAN().write(frame);
+  CAN().write(leftFrame);
+
+  int16_t neg_throttle = -throttle;
+  Frame rightFrame = {
+    .id=RIGHT_MOTOR_REQUEST_ID,
+    .body={
+      TORQUE_PREFIX,
+      lowByte(neg_throttle),
+      highByte(neg_throttle)
+    },
+    .len=3
+  };
+  CAN().write(rightFrame);
 }

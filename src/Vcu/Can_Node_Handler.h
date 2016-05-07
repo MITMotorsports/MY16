@@ -12,6 +12,7 @@ class Can_Node_Handler : public Handler {
     void brakeLightOff();
     void handleThrottleMessage(const uint8_t starboard, const uint8_t port);
     void handleBrakeMessage(const uint8_t starboard, const uint8_t port);
+    bool brakeThrottleConflict(uint8_t analogThrottle, uint8_t analogBrake);
 
     void regenMotors(uint8_t throttle);
     void driveMotors(uint8_t throttle);
