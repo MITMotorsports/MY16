@@ -4,3 +4,6 @@
 [submodule "src/Dash"]
 	path = src/Dash
 	url = https://github.com/MITMotorsports/MY16_Dash
+[submodule "src/Vcu"]
+	path = src/Vcu
+	url = https://github.com/MITMotorsports/MY16_Vcu
