@@ -1,3 +1,6 @@
 [submodule "src/Can_Node"]
 	path = src/Can_Node
 	url = https://github.com/MITMotorsports/MY16_Can_Node
+[submodule "src/Dash"]
+	path = src/Dash
+	url = https://github.com/MITMotorsports/MY16_Dash
