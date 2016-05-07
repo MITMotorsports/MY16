@@ -22,7 +22,11 @@ void Rtd_Controller::begin() {
 
   pinMode(MC_ENABLE_PIN, OUTPUT);
   pinMode(MC_ENABLE_BOOSTER_PIN, OUTPUT);
+
   setEnablePins(LOW);
+
+  pinMode(FAN_PIN, OUTPUT);
+  digitalWrite(FAN_PIN, LOW);
 }
 
 Rtd_Controller& Rtd_Controller::getInstance() {
@@ -49,12 +53,12 @@ void Rtd_Controller::disable() {
 
 void Rtd_Controller::setEnablePins(uint8_t direction) {
   if (direction == LOW) {
-    // Set pin 0 and pin 4 to low, all others stay the same
-    PORTK = PORTK & 0b11101110;
+    // Set pin 1 and pin 4 to low, all others stay the same
+    PORTK = PORTK & 0b11101101;
   }
   else if (direction == HIGH) {
-    // Set pin 0 and pin 4 to high, all others stay the same
-    PORTK = PORTK | 0b00010001;
+    // Set pin 1 and pin 4 to high, all others stay the same
+    PORTK = PORTK | 0b00010010;
   }
 }
 
