@@ -10,10 +10,12 @@ class Led_Controller {
     static Led_Controller& getInstance();
     void begin();
     void flex();
+    void shiftOut16(uint16_t val);
+    uint16_t getBinary16(uint16_t val);
     void set_lightbar_power(unsigned char power);
     void set_lightbar_battery(unsigned char power);
     void set_lightbar_overheat(bool value);
-    void lightBarUpdate(unsigned char states[8]);
+    void lightBarUpdate(uint16_t states[4]);
   private:
     Led_Controller();
     void flexForwards();
