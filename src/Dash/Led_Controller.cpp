@@ -52,14 +52,14 @@ void Led_Controller::lightBarUpdate(unsigned char states[8])
 {
   digitalWrite(LED_LATCH_PIN, LOW);
 
-  shiftOut(LED_SERIAL_PIN, LED_CLK_PIN, LSBFIRST, states[1]);
-  shiftOut(LED_SERIAL_PIN, LED_CLK_PIN, LSBFIRST, states[0]);
-  shiftOut(LED_SERIAL_PIN, LED_CLK_PIN, LSBFIRST, states[3]);
-  shiftOut(LED_SERIAL_PIN, LED_CLK_PIN, LSBFIRST, states[2]);
-  shiftOut(LED_SERIAL_PIN, LED_CLK_PIN, LSBFIRST, states[5]);
-  shiftOut(LED_SERIAL_PIN, LED_CLK_PIN, LSBFIRST, states[4]);
-  shiftOut(LED_SERIAL_PIN, LED_CLK_PIN, LSBFIRST, states[7]);
-  shiftOut(LED_SERIAL_PIN, LED_CLK_PIN, LSBFIRST, states[6]);
+  shiftOut(LED_SERIAL_PIN, LED_CLK_PIN, MSBFIRST, states[1]);
+  shiftOut(LED_SERIAL_PIN, LED_CLK_PIN, MSBFIRST, states[0]);
+  shiftOut(LED_SERIAL_PIN, LED_CLK_PIN, MSBFIRST, states[3]);
+  shiftOut(LED_SERIAL_PIN, LED_CLK_PIN, MSBFIRST, states[2]);
+  shiftOut(LED_SERIAL_PIN, LED_CLK_PIN, MSBFIRST, states[5]);
+  shiftOut(LED_SERIAL_PIN, LED_CLK_PIN, MSBFIRST, states[4]);
+  shiftOut(LED_SERIAL_PIN, LED_CLK_PIN, MSBFIRST, states[7]);
+  shiftOut(LED_SERIAL_PIN, LED_CLK_PIN, MSBFIRST, states[6]);
 
   digitalWrite(LED_LATCH_PIN, HIGH);
 }

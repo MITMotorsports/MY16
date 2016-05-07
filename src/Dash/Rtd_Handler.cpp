@@ -7,7 +7,7 @@ Debouncer debouncer(RTD_BUTTON_PIN, MODE_CLOSE_ON_PUSH, pressRtdButton, releaseR
 
 uint8_t bit_idx = 0;
 
-uint8_t lightbar_state[8] = {0,0,0,0,0,0,0,0};
+uint8_t test_lightbar_state[8] = {0,0,0,0,0,0,0,0};
 
 void Rtd_Handler::begin() {
   pinMode(RTD_BUTTON_PIN, INPUT);
@@ -55,8 +55,11 @@ uint8_t getOnes(uint8_t numOnes) {
 }
 
 void incrementLightbar() {
-  lightbar_state[bit_idx / 8] = getOnes(bit_idx % 8);
+  test_lightbar_state[bit_idx / 8] = getOnes(bit_idx % 8);
   bit_idx++;
+  if(bit_idx == 64) {
+    bit_idx = 0;
+  }
 }
 
 void pressRtdButton() {
@@ -68,7 +71,7 @@ void pressRtdButton() {
   Serial.print(bit_idx);
   Serial.println(" LEDs");
 
-  LED().lightBarUpdate(lightbar_state);
+  LED().lightBarUpdate(test_lightbar_state);
   incrementLightbar();
 }
 
