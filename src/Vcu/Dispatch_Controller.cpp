@@ -7,6 +7,7 @@
 
 #include "Can_Controller.h"
 #include "Rtd_Controller.h"
+#include "Store_Controller.h"
 
 Dispatch_Controller::Dispatch_Controller()
 : rtd_handler(Rtd_Handler()),
@@ -22,10 +23,50 @@ Dispatch_Controller::Dispatch_Controller()
 // Slight hack: invoke static member accessor function in non-member function
 // pointer to work with SoftTimer's bullshit.
 // TODO: Tighten this loop if perf problems arise
+
+// I deeply apologize for the next forty lines of code.
+// May Stroustroup forgive me.
 void dispatchPointer(Task*) {
   Dispatcher().dispatch();
 }
 Task stepTask(0, dispatchPointer);
+
+void requestVoltage(Task*) {
+  Dispatcher().requestMotorVoltage();
+}
+Task voltageTask(500, requestVoltage);
+
+void requestPermanentUpdatesLeft(Task*) {
+  Dispatcher().requestLeftMotorUpdates();
+}
+Task requestLeftMotorUpdatesTask(50, requestPermanentUpdatesLeft);
+
+void requestPermanentUpdatesRight(Task*) {
+  Dispatcher().requestRightMotorUpdates();
+}
+Task requestRightMotorUpdatesTask(100, requestPermanentUpdatesRight);
+
+void Dispatch_Controller::requestMotorVoltage() {
+  bool leftMotorResponded = Store().readMotorResponse(Store().LeftMotor);
+  bool rightMotorResponded = Store().readMotorResponse(Store().RightMotor);
+  if (!(leftMotorResponded && rightMotorResponded)) {
+    motor_handler.requestSingleVoltageUpdate();
+  }
+  else {
+    SoftTimer.remove(&voltageTask);
+    SoftTimer.add(&requestLeftMotorUpdatesTask);
+    SoftTimer.add(&requestRightMotorUpdatesTask);
+  }
+}
+
+void Dispatch_Controller::requestLeftMotorUpdates() {
+  motor_handler.requestPermanentUpdates(LEFT_MOTOR_REQUEST_ID);
+  SoftTimer.remove(&requestLeftMotorUpdatesTask);
+}
+void Dispatch_Controller::requestRightMotorUpdates() {
+  motor_handler.requestPermanentUpdates(RIGHT_MOTOR_REQUEST_ID);
+  SoftTimer.remove(&requestRightMotorUpdatesTask);
+}
 
 void Dispatch_Controller::begin() {
   //Make idempotent
@@ -51,8 +92,7 @@ void Dispatch_Controller::begin() {
   SoftTimer.add(&stepTask);
   // Start MC requests
   // TODO decide whether we want this always or only when RTD
-  motor_handler.requestPermanentUpdates(LEFT_MOTOR_ID);
-  motor_handler.requestPermanentUpdates(RIGHT_MOTOR_ID);
+  SoftTimer.add(&voltageTask);
 
   //Log to DAQ
   Serial.println("");

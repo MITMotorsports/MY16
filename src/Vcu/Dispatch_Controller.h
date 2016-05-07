@@ -14,9 +14,11 @@ class Dispatch_Controller {
     void enable();
     void dispatch();
     bool isEnabled();
+    void requestMotorVoltage();
+    void requestLeftMotorUpdates();
+    void requestRightMotorUpdates();
   private:
     Dispatch_Controller();
-    void performEnableActions(Frame& frame);
     static Dispatch_Controller *instance;
     Rtd_Handler rtd_handler;
     Can_Node_Handler can_node_handler;
