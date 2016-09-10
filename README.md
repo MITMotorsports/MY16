@@ -8,13 +8,12 @@ Arduino-IDE instructions are given first, and instructions for the more advanced
 
 Basic Instructions:
 
-1: Create a folder for this project in a memorable place.
+1. Create a folder for this project in a memorable place.
 
-2: Install [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) if you haven't already. Git is a version control system that makes it easy for multiple people to collaborate on a large codebase. Think Dropbox shared folders or the MechE's EPDM, but 100x better and allowing for things like merging simultaneous changes and viewing different branches. If you're Course 6 at MIT, you will definitely use this in many of your classes so it's worth learning now!
+2. Install [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) if you haven't already. Git is a version control system that makes it easy for multiple people to collaborate on a large codebase. Think Dropbox shared folders or the MechE's EPDM, but 100x better and allowing for things like merging simultaneous changes and viewing different branches. If you're Course 6 at MIT, you will definitely use this in many of your classes so it's worth learning now!
 
-3: Install the [Arduino IDE](https://www.arduino.cc/en/Main/Software). The version shouldn't matter, so just use the most recent one, but let me know if there is a problem with it!
+3. Install the [Arduino IDE](https://www.arduino.cc/en/Main/Software). The version shouldn't matter, so just use the most recent one, but let me know if there is a problem with it!
 
-4: [Clone this repository](https://help.github.com/articles/cloning-a-repository/) to the folder you created in step 1.
+4. [Clone this repository](https://help.github.com/articles/cloning-a-repository/) to the folder you created in step 1.
 
-5: Open the `/src` folder from the cloned repository, clone any of the MY16\_* files that you care about from the [MITMotorsports organization](https://github.com/MITMotorsports), and open their associated `.ino` files in the Arduino IDE. You are now coding!
-
+5. Open the `/src` folder from the cloned repository, clone any of the `MY16_*` projects that you care about from the [MITMotorsports organization](https://github.com/MITMotorsports), and open their associated `.ino` files in the Arduino IDE. You are now coding!
