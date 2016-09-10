@@ -17,11 +17,11 @@ Basic Instructions:
 
 4. Install the [Arduino IDE](https://www.arduino.cc/en/Main/Software). The version shouldn't matter, so just use the most recent one, but let me know if there is a problem with it!
 
-5. You should see a folder called `Arduino` located somewhere in your documents folder, with a subfolder called `libraries`. Copy all folders from the `lib` folder of this repository (the one you just cloned) to the `Arduino/libraries` in your Documents folder.
+5. You should see a folder called `Arduino` located somewhere in your `Documents` or `My Documents` folder, with a subfolder called `libraries`. Copy all folders from the `lib` folder of this repository (the one you just cloned) to the `Arduino/libraries` in your Documents folder.
 
 6. Open the `/src` folder from the cloned repository, clone any of the `MY16_*` projects that you care about from the [MITMotorsports organization](https://github.com/MITMotorsports), and open their associated `.ino` files in the Arduino IDE.
     * When cloning a repository, you should place it inside a folder (under `/src/`) with the same name as the `.ino` file.
     * So, if your project was located at `/Users/racecar_driver/FSAE/MY16`, and you wanted to edit the `MY16_VCU` project, you would first see that the `.ino` file was `Vcu.ino` and you would want to locate it at `/Users/racecar_driver/FSAE/MY16/src/Vcu/Vcu.ino`. Casing matters. Note that all of the `.cpp` and `.h` files should be at the same level as the `.ino` file.
     * Ignore any repositories that are marked as `DEPRECATED`; we don't want to pay github for private repos but we also don't want to just blow away old code, so this is our somewhat unprofessional solution.
 
-6. Follow the specific instructions for each sub-repository (see the README file on the sub-repository's github) to configure the Arduino IDE for the particular project.
+7. Follow the specific instructions for each sub-repository (see the README file on the sub-repository's github) to configure the Arduino IDE for the particular project.
