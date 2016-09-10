@@ -13,12 +13,15 @@ Basic Instructions:
 2. Install [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) if you haven't already. Git is a version control system that makes it easy for multiple people to collaborate on a large codebase. Think Dropbox shared folders or the MechE's EPDM, but 100x better and allowing for things like merging simultaneous changes and viewing different branches. If you're Course 6 at MIT, you will definitely use this in many of your classes so it's worth learning now!
     * The details of git are a bit out of scope for this readme, but I highly recommend reading [this link](https://git-scm.com/book/en/v2/Getting-Started-Git-Basics) to learn more about why we use git and why it is awesome.
 
-3. Install the [Arduino IDE](https://www.arduino.cc/en/Main/Software). The version shouldn't matter, so just use the most recent one, but let me know if there is a problem with it!
+3. [Clone this repository](https://help.github.com/articles/cloning-a-repository/) to the folder you created in step 1.
 
-4. [Clone this repository](https://help.github.com/articles/cloning-a-repository/) to the folder you created in step 1.
+4. Install the [Arduino IDE](https://www.arduino.cc/en/Main/Software). The version shouldn't matter, so just use the most recent one, but let me know if there is a problem with it!
 
-5. Open the `/src` folder from the cloned repository, clone any of the `MY16_*` projects that you care about from the [MITMotorsports organization](https://github.com/MITMotorsports), and open their associated `.ino` files in the Arduino IDE. You are now coding!
+5. You should see a folder called `Arduino` located somewhere in your documents folder, with a subfolder called `libraries`. Copy all folders from the `lib` folder of this repository (the one you just cloned) to the `Arduino/libraries` in your Documents folder.
+
+6. Open the `/src` folder from the cloned repository, clone any of the `MY16_*` projects that you care about from the [MITMotorsports organization](https://github.com/MITMotorsports), and open their associated `.ino` files in the Arduino IDE.
     * When cloning a repository, you should place it inside a folder (under `/src/`) with the same name as the `.ino` file.
     * So, if your project was located at `/Users/racecar_driver/FSAE/MY16`, and you wanted to edit the `MY16_VCU` project, you would first see that the `.ino` file was `Vcu.ino` and you would want to locate it at `/Users/racecar_driver/FSAE/MY16/src/Vcu/Vcu.ino`. Casing matters. Note that all of the `.cpp` and `.h` files should be at the same level as the `.ino` file.
     * Ignore any repositories that are marked as `DEPRECATED`; we don't want to pay github for private repos but we also don't want to just blow away old code, so this is our somewhat unprofessional solution.
 
+6. Follow the specific instructions for each sub-repository (see the README file on the sub-repository's github) to configure the Arduino IDE for the particular project.
