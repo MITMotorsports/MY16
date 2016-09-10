@@ -18,4 +18,7 @@ Basic Instructions:
 4. [Clone this repository](https://help.github.com/articles/cloning-a-repository/) to the folder you created in step 1.
 
 5. Open the `/src` folder from the cloned repository, clone any of the `MY16_*` projects that you care about from the [MITMotorsports organization](https://github.com/MITMotorsports), and open their associated `.ino` files in the Arduino IDE. You are now coding!
+    * When cloning a repository, you should place it inside a folder (under `/src/`) with the same name as the `.ino` file.
+    * So, if your project was located at `/Users/racecar_driver/FSAE/MY16`, and you wanted to edit the `MY16_VCU` project, you would first see that the `.ino` file was `Vcu.ino` and you would want to locate it at `/Users/racecar_driver/FSAE/MY16/src/Vcu/Vcu.ino`. Casing matters. Note that all of the `.cpp` and `.h` files should be at the same level as the `.ino` file.
     * Ignore any repositories that are marked as `DEPRECATED`; we don't want to pay github for private repos but we also don't want to just blow away old code, so this is our somewhat unprofessional solution.
+
